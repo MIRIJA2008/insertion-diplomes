@@ -1,0 +1,121 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  ADMIN
+  CONSULTANT
+}
+
+enum StatutCampagne {
+  BROUILLON
+  OUVERTE
+  CLOTUREE
+}
+
+enum Situation {
+  EMPLOI_SALARIE
+  EMPLOI_INDEPENDANT
+  POURSUITE_ETUDES
+  RECHERCHE_EMPLOI
+  AUTRE
+}
+
+enum TypeContrat {
+  CDI
+  CDD
+  STAGE
+  INDEPENDANT
+  OCCASIONNEL
+}
+
+model Utilisateur {
+  id             Int      @id @default(autoincrement())
+  nom            String
+  email          String   @unique
+  motDePasseHash String
+  role           Role     @default(CONSULTANT)
+  creeLe         DateTime @default(now())
+
+  @@map("utilisateurs")
+}
+
+model Filiere {
+  id         Int         @id @default(autoincrement())
+  code       String      @unique
+  intitule   String
+  niveau     String
+  promotions Promotion[]
+
+  @@map("filieres")
+}
+
+model Promotion {
+  id          Int       @id @default(autoincrement())
+  filiereId   Int
+  filiere     Filiere   @relation(fields: [filiereId], references: [id], onDelete: Restrict)
+  anneeSortie Int
+  effectif    Int?
+  diplomes    Diplome[]
+
+  @@unique([filiereId, anneeSortie])
+  @@map("promotions")
+}
+
+model Diplome {
+  id          Int          @id @default(autoincrement())
+  nom         String
+  prenom      String
+  promotionId Int
+  promotion   Promotion    @relation(fields: [promotionId], references: [id], onDelete: Restrict)
+  contact     String?
+  invitations Invitation[]
+
+  @@map("diplomes")
+}
+
+model Campagne {
+  id          Int            @id @default(autoincrement())
+  titre       String
+  dateDebut   DateTime
+  dateFin     DateTime
+  statut      StatutCampagne @default(BROUILLON)
+  invitations Invitation[]
+
+  @@map("campagnes")
+}
+
+model Invitation {
+  id         Int      @id @default(autoincrement())
+  campagneId Int
+  campagne   Campagne @relation(fields: [campagneId], references: [id], onDelete: Cascade)
+  diplomeId  Int
+  diplome    Diplome  @relation(fields: [diplomeId], references: [id], onDelete: Cascade)
+  jeton      String   @unique
+  reponse    Reponse?
+
+  @@unique([campagneId, diplomeId])
+  @@map("invitations")
+}
+
+model Reponse {
+  id                  Int          @id @default(autoincrement())
+  invitationId        Int          @unique
+  invitation          Invitation   @relation(fields: [invitationId], references: [id], onDelete: Cascade)
+  situation           Situation
+  secteur             String?
+  typeContrat         TypeContrat?
+  delaiInsertionMois  Int?
+  ville               String
+  adequationFormation Int?
+  remarque            String?
+  consentement        Boolean
+  soumiseLe           DateTime     @default(now())
+
+  @@map("reponses")
+}
