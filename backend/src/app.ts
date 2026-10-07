@@ -2,6 +2,8 @@ import express from "express";
 import cors from "cors";
 import helmet from "helmet";
 import { prisma } from "./config/prisma";
+import authRoutes from "./modules/auth/auth.routes";
+import { errorHandler } from "./middlewares/errorHandler";
 
 export const app = express();
 
@@ -22,6 +24,10 @@ app.get("/api/health/db", async (_req, res) => {
   }
 });
 
+app.use("/api/auth", authRoutes);
+
 app.use((_req, res) => {
   res.status(404).json({ error: "Route introuvable" });
 });
+
+app.use(errorHandler);
