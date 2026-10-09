@@ -4,6 +4,8 @@ import helmet from "helmet";
 import { prisma } from "./config/prisma";
 import authRoutes from "./modules/auth/auth.routes";
 import filiereRoutes from "./modules/filieres/filieres.routes";
+import promotionRoutes from "./modules/promotions/promotions.routes";
+import diplomeRoutes from "./modules/diplomes/diplomes.routes";
 import { errorHandler } from "./middlewares/errorHandler";
 
 export const app = express();
@@ -27,6 +29,8 @@ app.get("/api/health/db", async (_req, res) => {
 
 app.use("/api/auth", authRoutes);
 app.use("/api/filieres", filiereRoutes);
+app.use("/api/promotions", promotionRoutes);
+app.use("/api/diplomes", diplomeRoutes);
 
 app.use((_req, res) => {
   res.status(404).json({ error: "Route introuvable" });
