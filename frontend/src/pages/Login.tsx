@@ -10,7 +10,7 @@ export default function Login() {
   const [erreur, setErreur] = useState("");
   const [chargement, setChargement] = useState(false);
 
-  if (user) return <Navigate to="/filieres" replace />;
+  if (user) return <Navigate to="/tableau-de-bord" replace />;
 
   const soumettre = async (e: FormEvent) => {
     e.preventDefault();
@@ -18,7 +18,7 @@ export default function Login() {
     setChargement(true);
     try {
       await login(email, motDePasse);
-      navigate("/filieres", { replace: true });
+      navigate("/tableau-de-bord", { replace: true });
     } catch (err) {
       setErreur(err instanceof Error ? err.message : "Connexion impossible");
     } finally {
@@ -44,3 +44,4 @@ export default function Login() {
     </div>
   );
 }
+

@@ -10,6 +10,7 @@ export default function Layout() {
       <header className="topbar">
         <strong>Insertion des diplomes</strong>
         <nav>
+          <NavLink to="/tableau-de-bord">Tableau de bord</NavLink>
           <NavLink to="/filieres">Filieres</NavLink>
         </nav>
         <div className="user">
