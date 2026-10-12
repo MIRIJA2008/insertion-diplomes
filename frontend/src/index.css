@@ -38,3 +38,15 @@ button.danger { background: var(--rouge); padding: .35rem .7rem; }
 table { width: 100%; border-collapse: collapse; }
 th, td { text-align: left; padding: .65rem .8rem; border-bottom: 1px solid #eef0f3; }
 th { background: var(--bleu-clair); font-size: .85rem; }
+
+.public-page { max-width: 560px; margin: 0 auto; padding: 1rem; }
+.public-page .card { display: flex; flex-direction: column; gap: .5rem; }
+.public-page h1 { font-size: 1.25rem; margin: 0; }
+.choice { display: flex; align-items: center; gap: .6rem; padding: .7rem .8rem; border: 1px solid var(--bord); border-radius: 8px; font-weight: 400; margin-top: .25rem; cursor: pointer; }
+.choice input { width: auto; }
+.consent { background: var(--bleu-clair); }
+.scale { display: flex; gap: .4rem; }
+.scale .choice { flex: 1; justify-content: center; }
+select, textarea { width: 100%; padding: .6rem .7rem; border: 1px solid var(--bord); border-radius: 6px; font-size: 1rem; font-family: inherit; }
+.notice { background: #fff; border: 1px solid var(--bord); border-radius: 10px; padding: 1.25rem; }
+.success { color: #166534; background: #f0fdf4; padding: .8rem; border-radius: 6px; }
