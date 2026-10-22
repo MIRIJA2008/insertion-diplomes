@@ -1,10 +1,12 @@
-export type Role = "ADMIN" | "CONSULTANT";
+export type Role = "ADMIN" | "CONSULTANT" | "CANDIDAT" | "RECRUTEUR";
 
 export interface User {
   id: number;
   nom: string;
   email: string;
   role: Role;
+  langue?: string;
+  couleurAccent?: string;
 }
 
 export interface Session {
@@ -65,4 +67,39 @@ export async function api<T>(path: string, options: Options = {}): Promise<T> {
     throw new ApiError(res.status, [data?.error ?? "Une erreur est survenue", details].filter(Boolean).join(" - "));
   }
   return data as T;
+}
+
+export interface Offre {
+  id: number;
+  titre: string;
+  description: string;
+  niveauRequis: string | null;
+  filiereId: number | null;
+  filiere?: { id: number; code: string; intitule: string } | null;
+  competencesRecherchees: string[];
+  profilRecherche: string | null;
+  lieu: string;
+  typeContrat: string | null;
+  dateLimite: string;
+  creeLe: string;
+  statut: "OUVERTE" | "EXPIRE_BIENTOT" | "CLOTUREE";
+  nbCandidatures: number;
+  score?: number;
+  organisme: { id: number; nom: string; type: string; ville: string | null; verifie: boolean };
+}
+
+export interface Candidature {
+  id: number;
+  statut: "ENVOYEE" | "VUE" | "ACCEPTEE" | "REFUSEE";
+  dateEnvoi: string;
+  offre: { id: number; titre: string; dateLimite: string; organisme?: { nom: string } };
+  candidat?: { id: number; nom: string; email: string; profilCandidat?: { filiere?: { code: string }; competences: string[]; experience: string | null } | null };
+}
+
+export interface Notification {
+  id: number;
+  titre: string;
+  contenu: string;
+  lue: boolean;
+  creeLe: string;
 }

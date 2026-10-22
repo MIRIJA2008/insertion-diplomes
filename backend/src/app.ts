@@ -9,13 +9,23 @@ import diplomeRoutes from "./modules/diplomes/diplomes.routes";
 import campagneRoutes from "./modules/campagnes/campagnes.routes";
 import enqueteRoutes from "./modules/enquete/enquete.routes";
 import statistiqueRoutes from "./modules/statistiques/statistiques.routes";
+import { inscriptionRoutes } from "./modules/inscription/inscription.routes";
+import { offresRoutes } from "./modules/offres/offres.routes";
+import { candidaturesRoutes } from "./modules/candidatures/candidatures.routes";
+import { profilsRoutes } from "./modules/profils/profils.routes";
+import { recruteursRoutes } from "./modules/recruteurs/recruteurs.routes";
+import { publicRoutes } from "./modules/public/public.routes";
+import { notificationsRoutes } from "./modules/notifications/notifications.routes";
+import { communautesRoutes } from "./modules/communautes/communautes.routes";
+import { messagerieRoutes } from "./modules/messagerie/messagerie.routes";
 import { errorHandler } from "./middlewares/errorHandler";
 
 export const app = express();
 
 app.use(helmet());
 app.use(cors());
-app.use(express.json());
+// Limite relevee pour permettre l'envoi du CV en base64
+app.use(express.json({ limit: "15mb" }));
 
 app.get("/api/health", (_req, res) => {
   res.json({ status: "ok" });
@@ -30,6 +40,7 @@ app.get("/api/health/db", async (_req, res) => {
   }
 });
 
+// Routes existantes (inchangees)
 app.use("/api/auth", authRoutes);
 app.use("/api/filieres", filiereRoutes);
 app.use("/api/promotions", promotionRoutes);
@@ -37,6 +48,17 @@ app.use("/api/diplomes", diplomeRoutes);
 app.use("/api/campagnes", campagneRoutes);
 app.use("/api/enquete", enqueteRoutes);
 app.use("/api/statistiques", statistiqueRoutes);
+
+// Routes ajoutees par la refonte
+app.use("/api/inscription", inscriptionRoutes);
+app.use("/api/offres", offresRoutes);
+app.use("/api", candidaturesRoutes);
+app.use("/api/profils", profilsRoutes);
+app.use("/api/recruteurs", recruteursRoutes);
+app.use("/api/public", publicRoutes);
+app.use("/api/notifications", notificationsRoutes);
+app.use("/api/communautes", communautesRoutes);
+app.use("/api/messagerie", messagerieRoutes);
 
 app.use((_req, res) => {
   res.status(404).json({ error: "Route introuvable" });
