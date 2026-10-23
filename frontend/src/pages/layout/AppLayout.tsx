@@ -6,7 +6,7 @@ import { api, type Notification } from "../../api";
 import ThemeToggle from "../../components/ThemeToggle";
 import LanguageSelector from "../../components/LanguageSelector";
 
-function Contenu({ children }: { children?: React.ReactNode }) {
+function Contenu() {
   const { user, logout } = useAuth();
   const { t } = useI18n();
   const [notifs, setNotifs] = useState<Notification[]>([]);
@@ -102,7 +102,7 @@ function Contenu({ children }: { children?: React.ReactNode }) {
           <ThemeToggle />
         </div>
         <main className="page">
-          {children ?? <Outlet />}
+          <Outlet />
         </main>
       </div>
     </div>

@@ -20,6 +20,7 @@ import RecruteurAccueil from "./pages/recruteur/Accueil";
 import RecruteurMesOffres from "./pages/recruteur/MesOffres";
 import RecruteurRecu from "./pages/recruteur/Recu";
 import RecruteurOrganisme from "./pages/recruteur/Organisme";
+import RecruteurCandidatDetail from "./pages/recruteur/CandidatDetail";
 import Communautes from "./pages/Communautes";
 import Messagerie from "./pages/Messagerie";
 
@@ -69,6 +70,7 @@ export default function App() {
           <Route path="/recruteur/offres" element={<RecruteurMesOffres />} />
           <Route path="/recruteur/candidatures" element={<RecruteurRecu />} />
           <Route path="/recruteur/organisme" element={<RecruteurOrganisme />} />
+          <Route path="/recruteur/candidat/:id" element={<RecruteurCandidatDetail />} />
         </Route>
 
         <Route path="/communautes" element={<Communautes />} />

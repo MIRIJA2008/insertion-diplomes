@@ -89,10 +89,10 @@ export default function RecruteurAccueil() {
       {dernieres.length > 0 && (
         <div className="rec-list">
           {dernieres.map((c) => (
-            <Link key={c.id} to={`/recruteur/candidat/${c.candidat.id}`} className="rec-item">
-              <div className="rec-avatar">{initiales(c.candidat.nom)}</div>
+            <Link key={c.id} to={`/recruteur/candidat/${c.candidat?.id ?? 0}`} className="rec-item">
+              <div className="rec-avatar">{initiales(c.candidat?.nom ?? "Candidat")}</div>
               <div className="rec-item-body">
-                <div className="rec-item-title">{c.candidat.nom}</div>
+                <div className="rec-item-title">{c.candidat?.nom ?? "Candidat"}</div>
                 <div className="rec-item-meta">
                   {c.offre.titre} - statut {c.statut}
                 </div>

@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { z } from "zod";
 import { prisma } from "../../config/prisma";
-import { authenticate } from "../../middlewares/authenticate";
+import { authenticate, requireRole } from "../../middlewares/authenticate";
 import { HttpError } from "../../utils/httpError";
 
 export const profilsRoutes = Router();
@@ -117,4 +117,53 @@ profilsRoutes.get("/moi/cv", async (req, res, next) => {
   } catch (e) {
     next(e);
   }
+});
+// Consultation profil candidat par recruteur/admin
+profilsRoutes.get("/:candidatId/photo", authenticate, requireRole("RECRUTEUR", "ADMIN"), async (req, res, next) => {
+  try {
+    const id = Number(req.params.candidatId);
+    const p = await prisma.profilCandidat.findUnique({ where: { utilisateurId: id } });
+    if (!p || !p.photo) return next(new HttpError(404, "Photo introuvable"));
+    res.setHeader("Content-Type", "image/png");
+    res.send(Buffer.from(p.photo));
+  } catch (e) { next(e); }
+});
+
+profilsRoutes.get("/:candidatId/cv", authenticate, requireRole("RECRUTEUR", "ADMIN"), async (req, res, next) => {
+  try {
+    const id = Number(req.params.candidatId);
+    const p = await prisma.profilCandidat.findUnique({ where: { utilisateurId: id } });
+    if (!p || !p.cvPdf) return next(new HttpError(404, "CV introuvable"));
+    res.setHeader("Content-Type", "application/pdf");
+    res.setHeader("Content-Disposition", `inline; filename="${p.cvNom ?? "cv.pdf"}"`);
+    res.send(Buffer.from(p.cvPdf));
+  } catch (e) { next(e); }
+});
+
+profilsRoutes.get("/:candidatId", authenticate, requireRole("RECRUTEUR", "ADMIN"), async (req, res, next) => {
+  try {
+    const id = Number(req.params.candidatId);
+    const u = await prisma.utilisateur.findUnique({
+      where: { id },
+      include: { profilCandidat: { include: { filiere: true } } },
+    });
+    if (!u) return next(new HttpError(404, "Utilisateur introuvable"));
+    if (!u.profilCandidat) return next(new HttpError(404, "Ce candidat n a pas de profil"));
+    const p = u.profilCandidat;
+    res.json({
+      utilisateur: { id: u.id, nom: u.nom, email: u.email, creeLe: u.creeLe },
+      profil: {
+        niveauEtudes: p.niveauEtudes,
+        filiere: p.filiere,
+        etablissement: p.etablissement,
+        diplomes: p.diplomes,
+        competences: p.competences,
+        experience: p.experience,
+        aCv: !!p.cvPdf,
+        cvNom: p.cvNom,
+        aPhoto: !!p.photo,
+        majLe: p.majLe,
+      },
+    });
+  } catch (e) { next(e); }
 });

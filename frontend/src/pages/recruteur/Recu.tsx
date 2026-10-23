@@ -81,16 +81,16 @@ export default function RecruteurRecu() {
         <div className="rec-list">
           {filtered.map((c) => (
             <div key={c.id} className="rec-item">
-              <div className="rec-avatar">{initiales(c.candidat.nom)}</div>
+              <div className="rec-avatar">{initiales(c.candidat?.nom ?? "Candidat")}</div>
               <div className="rec-item-body">
-                <div className="rec-item-title">{c.candidat.nom}</div>
+                <div className="rec-item-title">{c.candidat?.nom ?? "Candidat"}</div>
                 <div className="rec-item-meta">
                   {c.offre.titre} - {new Date(c.dateEnvoi).toLocaleDateString("fr-FR")}
                 </div>
               </div>
               <div style={{ display: "flex", gap: ".5rem", alignItems: "center", flexWrap: "wrap" }}>
                 <span className="pf-chip pf-chip-cyan">{LABEL[c.statut] ?? c.statut}</span>
-                <Link to={`/recruteur/candidat/${c.candidat.id}`} className="pf-btn" style={{ padding: ".4rem .8rem", fontSize: ".8rem" }}>
+                <Link to={`/recruteur/candidat/${c.candidat?.id ?? 0}`} className="pf-btn" style={{ padding: ".4rem .8rem", fontSize: ".8rem" }}>
                   Voir profil
                 </Link>
                 <select
