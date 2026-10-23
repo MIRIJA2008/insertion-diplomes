@@ -67,8 +67,8 @@ export default function Home() {
       <section className="home-hero">
         <div className="home-hero-grid">
           <div className="home-hero-copy">
-            <div className="home-eyebrow"><span className="home-pulse" />Plateforme d’insertion professionnelle</div>
-            <h1>{t("home.heroTitle")}<span className="home-gradient-text">Votre avenir commence ici.</span></h1>
+            <div className="home-eyebrow"><span className="home-pulse" />Suivi de l'insertion des diplomes</div>
+            <h1>{t("home.heroTitle")}<span className="home-gradient-text">Votre parcours academique merite un avenir a sa hauteur.</span></h1>
             <p className="home-hero-description">{t("home.heroSubtitle")}</p>
             <div className="home-hero-actions">
               <Link className="home-primary-cta" to="/offres">{t("home.ctaSearch")} <span aria-hidden="true">↗</span></Link>
