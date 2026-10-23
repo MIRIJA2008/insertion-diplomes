@@ -13,3 +13,9 @@ start-dev.ps1
 # Backups locaux
 *.bak
 *.old-*
+
+# Sauvegardes locales (NE PAS PUSHER)
+backup-design-*/
+*.dump
+*.sql.gz
+sauvegarde_*.dump
