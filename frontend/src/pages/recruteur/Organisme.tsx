@@ -1,77 +1,91 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { api } from "../../api";
-import { useI18n } from "../../i18n";
 
 interface Organisme {
-  nom: string;
-  type: string;
-  ville: string | null;
-  description: string | null;
-  verifie: boolean;
+  id?: number; nom: string; type: string; description: string | null;
+  ville: string | null; verifie?: boolean;
 }
 
+const TYPES = [
+  { v: "MINISTERE", l: "Ministere" }, { v: "ADMINISTRATION", l: "Administration" },
+  { v: "ENTREPRISE_PRIVEE", l: "Entreprise privee" }, { v: "ONG", l: "ONG" },
+  { v: "AUTRE", l: "Autre" },
+];
+
 export default function RecruteurOrganisme() {
-  const { t } = useI18n();
-  const [nom, setNom] = useState("");
-  const [type, setType] = useState("ENTREPRISE_PRIVEE");
-  const [ville, setVille] = useState("");
-  const [description, setDescription] = useState("");
-  const [verifie, setVerifie] = useState(false);
+  const [data, setData] = useState<Organisme | null>(null);
+  const [form, setForm] = useState<Organisme>({ nom: "", type: "ENTREPRISE_PRIVEE", description: "", ville: "" });
   const [message, setMessage] = useState("");
   const [erreur, setErreur] = useState("");
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    api<Organisme | null>("/recruteurs/moi/organisme")
-      .then((o) => {
-        if (o) {
-          setNom(o.nom);
-          setType(o.type);
-          setVille(o.ville ?? "");
-          setDescription(o.description ?? "");
-          setVerifie(o.verifie);
-        }
-      })
-      .catch(() => {});
+    api<Organisme>("/recruteurs/moi/organisme").then((o) => {
+      setData(o); setForm({ ...o, description: o.description ?? "", ville: o.ville ?? "" });
+    }).catch(() => setData(null));
   }, []);
 
-  const soumettre = async (e: FormEvent) => {
-    e.preventDefault();
-    setMessage("");
-    setErreur("");
+  const save = async (e: FormEvent) => {
+    e.preventDefault(); setMessage(""); setErreur(""); setSaving(true);
     try {
-      await api("/recruteurs/moi/organisme", {
-        method: "PUT",
-        body: { nom, type, ville: ville || undefined, description: description || undefined },
-      });
-      setMessage(t("profil.saved"));
-    } catch (e2) {
-      setErreur(e2 instanceof Error ? e2.message : "Erreur");
-    }
+      const payload = {
+        nom: form.nom, type: form.type,
+        description: form.description || undefined,
+        ville: form.ville || undefined,
+      };
+      const updated = await api<Organisme>("/recruteurs/moi/organisme", { method: "PUT", body: payload });
+      setData(updated);
+      setMessage("Organisme mis a jour");
+    } catch (e) {
+      setErreur(e instanceof Error ? e.message : "Erreur");
+    } finally { setSaving(false); }
   };
 
   return (
-    <section style={{ maxWidth: 560 }}>
-      <h2>{t("recr.orgInfos")}</h2>
-      {verifie && <p className="success">{t("recr.verified")} \u2705</p>}
-      <form className="card" onSubmit={soumettre} style={{ display: "grid", gap: ".4rem" }}>
-        <label>{t("auth.orgName")}</label>
-        <input required value={nom} onChange={(e) => setNom(e.target.value)} />
-        <label>{t("auth.orgType")}</label>
-        <select value={type} onChange={(e) => setType(e.target.value)}>
-          <option value="MINISTERE">Ministere</option>
-          <option value="ADMINISTRATION">Administration publique</option>
-          <option value="ENTREPRISE_PRIVEE">Entreprise privee</option>
-          <option value="ONG">ONG / association</option>
-          <option value="AUTRE">Autre</option>
-        </select>
-        <label>{t("auth.orgCity")}</label>
-        <input value={ville} onChange={(e) => setVille(e.target.value)} />
-        <label>{t("auth.orgDescription")}</label>
-        <textarea rows={3} value={description} onChange={(e) => setDescription(e.target.value)} />
-        {message && <p className="success">{message}</p>}
-        {erreur && <p className="error">{erreur}</p>}
-        <div><button type="submit">{t("common.save")}</button></div>
+    <div>
+      <div className="pf-header">
+        <div className="pf-header-copy">
+          <h1>Mon organisme</h1>
+          <p>Ces informations apparaitront sur toutes vos offres publiees.</p>
+        </div>
+      </div>
+
+      {data && (
+        <div className="rec-profile-card" style={{ marginBottom: "1.5rem" }}>
+          <div style={{ display: "flex", gap: ".75rem", alignItems: "center", marginBottom: ".5rem" }}>
+            <div className="rec-avatar">{data.nom.slice(0, 2).toUpperCase()}</div>
+            <div>
+              <div style={{ fontWeight: 750 }}>{data.nom}</div>
+              <div style={{ color: "var(--texte-muet)", fontSize: ".85rem" }}>
+                {TYPES.find((t) => t.v === data.type)?.l ?? data.type}
+                {data.verifie ? " - Verifie" : " - En attente de verification"}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <form onSubmit={save} className="rec-profile-card" style={{ display: "flex", flexDirection: "column", gap: ".85rem" }}>
+        <label>Nom de l organisme*
+          <input required value={form.nom} onChange={(e) => setForm({ ...form, nom: e.target.value })} />
+        </label>
+        <label>Type
+          <select value={form.type} onChange={(e) => setForm({ ...form, type: e.target.value })}>
+            {TYPES.map((t) => <option key={t.v} value={t.v}>{t.l}</option>)}
+          </select>
+        </label>
+        <label>Description
+          <textarea rows={4} value={form.description ?? ""} onChange={(e) => setForm({ ...form, description: e.target.value })} />
+        </label>
+        <label>Ville
+          <input value={form.ville ?? ""} onChange={(e) => setForm({ ...form, ville: e.target.value })} />
+        </label>
+        {message && <div className="pf-alert pf-alert-success">{message}</div>}
+        {erreur && <div className="pf-alert pf-alert-error">{erreur}</div>}
+        <div style={{ display: "flex", justifyContent: "flex-end" }}>
+          <button type="submit" className="pf-btn pf-btn-primary" disabled={saving}>{saving ? "Enregistrement..." : "Enregistrer"}</button>
+        </div>
       </form>
-    </section>
+    </div>
   );
 }
