@@ -9,3 +9,7 @@ coverage/
 .DS_Store
 Thumbs.db
 start-dev.ps1
+
+# Backups locaux
+*.bak
+*.old-*
