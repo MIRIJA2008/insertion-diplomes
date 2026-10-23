@@ -1,10 +1,16 @@
 import { useEffect, useState, type FormEvent } from "react";
-import { useSearchParams } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { api, type Offre } from "../api";
 import { useI18n } from "../i18n";
-import OffreCard from "../components/OffreCard";
+import PublicNav from "../components/PublicNav";
+import PageHeader from "../components/PageHeader";
 
 interface Filiere { id: number; code: string; intitule: string }
+
+const TYPE_LABEL: Record<string, string> = {
+  CDI: "CDI", CDD: "CDD", STAGE: "Stage",
+  INDEPENDANT: "Independant", OCCASIONNEL: "Occasionnel",
+};
 
 export default function Offres() {
   const { t } = useI18n();
@@ -38,44 +44,95 @@ export default function Offres() {
     charger();
   };
 
-  return (
-    <section>
-      <h2>{t("nav.offers")}</h2>
-      <form className="card filters" onSubmit={filtrer} style={{ gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))" }}>
-        <div>
-          <label>{t("common.search")}</label>
-          <input value={q} onChange={(e) => setQ(e.target.value)} placeholder={t("home.searchPlaceholder")} />
-        </div>
-        <div>
-          <label>{t("offer.filterCity")}</label>
-          <input value={ville} onChange={(e) => setVille(e.target.value)} />
-        </div>
-        <div>
-          <label>{t("offer.filterContract")}</label>
-          <select value={typeContrat} onChange={(e) => setTypeContrat(e.target.value)}>
-            <option value="">{t("common.all")}</option>
-            {["CDI", "CDD", "STAGE", "INDEPENDANT", "OCCASIONNEL"].map((c) => <option key={c} value={c}>{c}</option>)}
-          </select>
-        </div>
-        <div>
-          <label>{t("offer.filterField")}</label>
-          <select value={filiereId} onChange={(e) => setFiliereId(e.target.value)}>
-            <option value="">{t("common.all")}</option>
-            {filieres.map((f) => <option key={f.id} value={f.id}>{f.code} - {f.intitule}</option>)}
-          </select>
-        </div>
-        <div style={{ display: "flex", alignItems: "flex-end" }}>
-          <button type="submit">{t("common.search")}</button>
-        </div>
-      </form>
+  const reinit = () => {
+    setQ(""); setVille(""); setTypeContrat(""); setFiliereId("");
+    setParams(new URLSearchParams());
+    setOffres(null);
+    api<Offre[]>("/offres").then(setOffres).catch(() => setOffres([]));
+  };
 
-      {offres === null && <p className="muted">{t("common.loading")}</p>}
-      {offres !== null && offres.length === 0 && <p className="empty">{t("common.none")}</p>}
-      {offres !== null && offres.length > 0 && (
-        <div className="grille">
-          {offres.map((o) => <OffreCard key={o.id} offre={o} />)}
-        </div>
-      )}
-    </section>
+  return (
+    <div className="pf-page">
+      <PublicNav />
+      <div className="pf-container">
+        <PageHeader
+          title={t("nav.offers")}
+          subtitle="Trouvez l'opportunite qui correspond a votre parcours"
+          backTo="/"
+          backLabel="Accueil"
+        />
+
+        <form className="pf-filters" onSubmit={filtrer}>
+          <div className="pf-filter">
+            <label>{t("common.search")}</label>
+            <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Mot-cle, titre..." />
+          </div>
+          <div className="pf-filter">
+            <label>{t("offer.filterCity")}</label>
+            <input value={ville} onChange={(e) => setVille(e.target.value)} placeholder="Antananarivo..." />
+          </div>
+          <div className="pf-filter">
+            <label>{t("offer.filterContract")}</label>
+            <select value={typeContrat} onChange={(e) => setTypeContrat(e.target.value)}>
+              <option value="">{t("common.all")}</option>
+              {["CDI", "CDD", "STAGE", "INDEPENDANT", "OCCASIONNEL"].map((c) => (
+                <option key={c} value={c}>{TYPE_LABEL[c] ?? c}</option>
+              ))}
+            </select>
+          </div>
+          <div className="pf-filter">
+            <label>{t("offer.filterField")}</label>
+            <select value={filiereId} onChange={(e) => setFiliereId(e.target.value)}>
+              <option value="">{t("common.all")}</option>
+              {filieres.map((f) => <option key={f.id} value={f.id}>{f.code} - {f.intitule}</option>)}
+            </select>
+          </div>
+          <div className="pf-filter pf-filter-btn">
+            <button type="submit" className="pf-btn pf-btn-primary">{t("common.search")}</button>
+          </div>
+        </form>
+
+        {offres === null && (
+          <div className="pf-offres-grid">
+            {[1,2,3,4,5,6].map((i) => <div key={i} className="pf-skeleton" />)}
+          </div>
+        )}
+
+        {offres !== null && offres.length === 0 && (
+          <div className="pf-empty">
+            <div className="pf-empty-icon">📭</div>
+            <h3>Aucune offre ne correspond</h3>
+            <p>Essayez d'elargir vos criteres de recherche.</p>
+            <button className="pf-btn pf-btn-ghost" onClick={reinit}>Reinitialiser les filtres</button>
+          </div>
+        )}
+
+        {offres !== null && offres.length > 0 && (
+          <>
+            <p style={{ color: "var(--texte-muet)", margin: "0 0 1.25rem", fontSize: ".9rem" }}>
+              <strong style={{ color: "var(--fusion-cyan)" }}>{offres.length}</strong> offre{offres.length > 1 ? "s" : ""} disponible{offres.length > 1 ? "s" : ""}
+            </p>
+            <div className="pf-offres-grid">
+              {offres.map((o) => (
+                <Link key={o.id} to={`/offres/${o.id}`} className="pf-offre-card">
+                  <div className="pf-offre-meta">
+                    {o.typeContrat && <span className="pf-chip pf-chip-violet">{TYPE_LABEL[o.typeContrat] ?? o.typeContrat}</span>}
+                    {o.filiere && <span className="pf-chip pf-chip-cyan">{o.filiere.code}</span>}
+                    <span className="pf-chip">{o.statut === "CLOTUREE" ? "Cloturee" : "Ouverte"}</span>
+                  </div>
+                  <h3>{o.titre}</h3>
+                  <p className="pf-org">{o.organisme.nom}{o.organisme.ville ? ` - ${o.organisme.ville}` : ""}</p>
+                  <p className="pf-desc">{o.description}</p>
+                  <div className="pf-offre-footer">
+                    <span>{o.lieu} - Limite {new Date(o.dateLimite).toLocaleDateString("fr-FR")}</span>
+                    <span className="pf-arrow">Voir &rarr;</span>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          </>
+        )}
+      </div>
+    </div>
   );
 }
