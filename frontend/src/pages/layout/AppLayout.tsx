@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { NavLink, Navigate, Outlet } from "react-router-dom";
+import { Link, NavLink, Navigate, Outlet } from "react-router-dom";
 import { useAuth } from "../../auth";
 import { useI18n } from "../../i18n";
 import { api, type Notification } from "../../api";
@@ -68,6 +68,7 @@ function Contenu() {
         )}
 
         <div className="spacer" />
+        <Link to="/" className="sidebar-public-link"><span aria-hidden="true">&larr;</span> Site public</Link>
         <button className="secondary" onClick={logout}>{t("nav.logout")}</button>
       </aside>
 
