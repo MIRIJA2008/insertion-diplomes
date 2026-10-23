@@ -1,6 +1,7 @@
 import { Navigate, Route, Routes } from "react-router-dom";
 import { useAuth } from "./auth";
 import AppLayout from "./pages/layout/AppLayout";
+import RequireRole from "./components/RequireRole";
 import Home from "./pages/Home";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
@@ -39,6 +40,7 @@ function AccueilSelonRole() {
 export default function App() {
   return (
     <Routes>
+      {/* Routes publiques */}
       <Route path="/" element={<Home />} />
       <Route path="/offres" element={<Offres />} />
       <Route path="/offres/:id" element={<OffreDetail />} />
@@ -46,19 +48,29 @@ export default function App() {
       <Route path="/inscription" element={<Register />} />
       <Route path="/enquete/:jeton" element={<Enquete />} />
 
+      {/* Routes privees (layout + guards par role) */}
       <Route element={<AppLayout />}>
-        <Route path="/tableau-de-bord" element={<Dashboard />} />
-        <Route path="/filieres" element={<Filieres />} />
-        <Route path="/campagnes" element={<Campagnes />} />
-        <Route path="/candidat" element={<CandidatAccueil />} />
-        <Route path="/candidat/profil" element={<CandidatProfil />} />
-        <Route path="/candidat/candidatures" element={<CandidatSuivi />} />
-        <Route path="/candidat/favoris" element={<CandidatFavoris />} />
-        <Route path="/candidat/parametres" element={<CandidatParametres />} />
-        <Route path="/recruteur" element={<RecruteurAccueil />} />
-        <Route path="/recruteur/offres" element={<RecruteurMesOffres />} />
-        <Route path="/recruteur/candidatures" element={<RecruteurRecu />} />
-        <Route path="/recruteur/organisme" element={<RecruteurOrganisme />} />
+        <Route element={<RequireRole roles={["ADMIN", "CONSULTANT"]} />}>
+          <Route path="/tableau-de-bord" element={<Dashboard />} />
+          <Route path="/filieres" element={<Filieres />} />
+          <Route path="/campagnes" element={<Campagnes />} />
+        </Route>
+
+        <Route element={<RequireRole roles={["CANDIDAT"]} />}>
+          <Route path="/candidat" element={<CandidatAccueil />} />
+          <Route path="/candidat/profil" element={<CandidatProfil />} />
+          <Route path="/candidat/candidatures" element={<CandidatSuivi />} />
+          <Route path="/candidat/favoris" element={<CandidatFavoris />} />
+          <Route path="/candidat/parametres" element={<CandidatParametres />} />
+        </Route>
+
+        <Route element={<RequireRole roles={["RECRUTEUR"]} />}>
+          <Route path="/recruteur" element={<RecruteurAccueil />} />
+          <Route path="/recruteur/offres" element={<RecruteurMesOffres />} />
+          <Route path="/recruteur/candidatures" element={<RecruteurRecu />} />
+          <Route path="/recruteur/organisme" element={<RecruteurOrganisme />} />
+        </Route>
+
         <Route path="/communautes" element={<Communautes />} />
         <Route path="/messages" element={<Messagerie />} />
       </Route>

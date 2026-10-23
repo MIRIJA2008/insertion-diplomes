@@ -1,20 +1,26 @@
 import { useState, type FormEvent } from "react";
-import { Link, Navigate, useNavigate } from "react-router-dom";
+import { Link, Navigate } from "react-router-dom";
 import { useAuth } from "../auth";
 import { useI18n } from "../i18n";
 import ThemeToggle from "../components/ThemeToggle";
 import LanguageSelector from "../components/LanguageSelector";
 
+const ROUTE_PAR_ROLE: Record<string, string> = {
+  ADMIN: "/tableau-de-bord",
+  CONSULTANT: "/tableau-de-bord",
+  RECRUTEUR: "/recruteur",
+  CANDIDAT: "/candidat",
+};
+
 export default function Login() {
   const { user, login } = useAuth();
   const { t } = useI18n();
-  const navigate = useNavigate();
   const [email, setEmail] = useState("");
   const [motDePasse, setMotDePasse] = useState("");
   const [erreur, setErreur] = useState("");
   const [chargement, setChargement] = useState(false);
 
-  if (user) return <Navigate to="/" replace />;
+  if (user) return <Navigate to={ROUTE_PAR_ROLE[user.role] ?? "/"} replace />;
 
   const soumettre = async (e: FormEvent) => {
     e.preventDefault();
@@ -22,7 +28,8 @@ export default function Login() {
     setChargement(true);
     try {
       await login(email, motDePasse);
-      navigate("/", { replace: true });
+      // La redirection est automatique : AuthProvider met a jour `user`,
+      // ce qui provoque un re-render et fait declencher le <Navigate> ci-dessus.
     } catch (err) {
       setErreur(err instanceof Error ? err.message : "Connexion impossible");
     } finally {
