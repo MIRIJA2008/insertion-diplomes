@@ -1095,3 +1095,40 @@ tbody tr:hover {
   .cand-stat-value { font-size: 1.5rem; }
   .cand-item { flex-wrap: wrap; }
 }
+
+/* Upload CV */
+.cand-cv-zone { padding: 1.25rem; border: 2px dashed var(--bord); border-radius: 14px; background: var(--surface-2); text-align: center; transition: all .2s ease; cursor: pointer; }
+.cand-cv-zone:hover { border-color: var(--fusion-cyan); background: color-mix(in srgb, var(--fusion-cyan) 6%, var(--surface-2)); }
+.cand-cv-zone.dragging { border-color: var(--fusion-violet); background: color-mix(in srgb, var(--fusion-violet) 10%, var(--surface-2)); }
+.cand-cv-icon { font-size: 2.25rem; margin-bottom: .5rem; opacity: .7; }
+.cand-cv-title { font-weight: 700; margin-bottom: .25rem; }
+.cand-cv-hint { font-size: .85rem; color: var(--texte-muet); }
+.cand-cv-file { display: flex; align-items: center; gap: .75rem; padding: .85rem 1rem; border-radius: 12px; background: color-mix(in srgb, var(--fusion-cyan) 10%, var(--surface)); border: 1px solid color-mix(in srgb, var(--fusion-cyan) 40%, transparent); margin-top: .75rem; }
+.cand-cv-file-icon { font-size: 1.5rem; }
+.cand-cv-file-info { flex: 1; min-width: 0; }
+.cand-cv-file-name { font-weight: 700; font-size: .9rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.cand-cv-file-size { font-size: .78rem; color: var(--texte-muet); }
+
+/* Preferences */
+.cand-pref-section { margin-bottom: 1.5rem; }
+.cand-pref-section h3 { margin: 0 0 .75rem; font-size: 1rem; text-transform: uppercase; letter-spacing: .06em; color: var(--texte-muet); }
+.cand-pref-options { display: flex; flex-wrap: wrap; gap: .5rem; }
+.cand-pref-option { padding: .6rem 1.1rem; border-radius: 12px; border: 1px solid var(--bord); background: var(--surface); color: var(--texte-muet); cursor: pointer; font-weight: 600; font-size: .88rem; transition: all .2s ease; }
+.cand-pref-option:hover { border-color: color-mix(in srgb, var(--fusion-cyan) 45%, transparent); }
+.cand-pref-option.active { background: linear-gradient(110deg, var(--fusion-cyan), var(--fusion-violet)); border-color: transparent; color: #fff; }
+.cand-pref-color { width: 42px; height: 42px; border-radius: 50%; border: 3px solid transparent; cursor: pointer; transition: all .2s ease; padding: 0; }
+.cand-pref-color.bleu { background: linear-gradient(135deg, #3b82f6, #1e40af); }
+.cand-pref-color.violet { background: linear-gradient(135deg, #a78bfa, #7c3aed); }
+.cand-pref-color.rose { background: linear-gradient(135deg, #f472b6, #be185d); }
+.cand-pref-color.cyan { background: linear-gradient(135deg, #67e8f9, #0891b2); }
+.cand-pref-color.vert { background: linear-gradient(135deg, #34d399, #047857); }
+.cand-pref-color.orange { background: linear-gradient(135deg, #fbbf24, #d97706); }
+.cand-pref-color.active { border-color: var(--texte); transform: scale(1.15); box-shadow: 0 0 0 3px var(--surface), 0 0 0 5px var(--fusion-cyan); }
+.cand-pref-color:hover { transform: scale(1.08); }
+
+/* Section profil */
+.cand-profil-card { padding: 1.5rem; border-radius: 18px; background: var(--surface); border: 1px solid var(--bord); margin-bottom: 1rem; }
+.cand-profil-card h3 { margin: 0 0 1rem; font-size: 1rem; text-transform: uppercase; letter-spacing: .06em; color: var(--texte-muet); }
+.cand-profil-card label { display: block; margin-bottom: .85rem; font-size: .85rem; font-weight: 650; color: var(--texte); }
+.cand-profil-card input, .cand-profil-card select, .cand-profil-card textarea { width: 100%; margin-top: .35rem; padding: .7rem .85rem; border-radius: 10px; border: 1px solid var(--bord); background: var(--surface-2); color: var(--texte); font-family: inherit; font-size: .9rem; }
+.cand-profil-card input:focus, .cand-profil-card select:focus, .cand-profil-card textarea:focus { outline: 2px solid color-mix(in srgb, var(--fusion-cyan) 55%, transparent); outline-offset: 2px; }

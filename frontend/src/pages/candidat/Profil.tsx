@@ -1,47 +1,64 @@
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { api } from "../../api";
-import { useI18n } from "../../i18n";
 
 interface Filiere { id: number; code: string; intitule: string }
-interface ProfilData {
+
+interface ProfilMoi {
+  utilisateur: { id: number; nom: string; email: string };
   profil: {
     niveauEtudes: string | null;
     filiereId: number | null;
+    filiere: Filiere | null;
     etablissement: string | null;
     diplomes: string[];
     competences: string[];
     experience: string | null;
+    aCv: boolean;
+    cvNom: string | null;
+    aPhoto: boolean;
   } | null;
-  cvNom: string | null;
+}
+
+function formatTaille(octets: number) {
+  if (octets < 1024) return `${octets} o`;
+  if (octets < 1048576) return `${(octets / 1024).toFixed(1)} Ko`;
+  return `${(octets / 1048576).toFixed(2)} Mo`;
 }
 
 export default function CandidatProfil() {
-  const { t } = useI18n();
+  const [data, setData] = useState<ProfilMoi | null>(null);
   const [filieres, setFilieres] = useState<Filiere[]>([]);
-  const [donnees, setDonnees] = useState<ProfilData | null>(null);
-  const [niveauEtudes, setNiveauEtudes] = useState("");
-  const [filiereId, setFiliereId] = useState("");
-  const [etablissement, setEtablissement] = useState("");
-  const [diplomes, setDiplomes] = useState("");
-  const [competences, setCompetences] = useState("");
-  const [experience, setExperience] = useState("");
+  const [form, setForm] = useState({
+    niveauEtudes: "",
+    filiereId: "",
+    etablissement: "",
+    diplomes: "",
+    competences: "",
+    experience: "",
+  });
   const [message, setMessage] = useState("");
   const [erreur, setErreur] = useState("");
-  const fichier = useRef<HTMLInputElement>(null);
+  const [saving, setSaving] = useState(false);
+  const [cvFile, setCvFile] = useState<File | null>(null);
+  const [cvUploading, setCvUploading] = useState(false);
+  const [cvMessage, setCvMessage] = useState("");
+  const [dragOver, setDragOver] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const charger = () => {
-    api<ProfilData>("/profils/moi")
-      .then((d) => {
-        setDonnees(d);
-        const p = d.profil;
-        setNiveauEtudes(p?.niveauEtudes ?? "");
-        setFiliereId(p?.filiereId ? String(p.filiereId) : "");
-        setEtablissement(p?.etablissement ?? "");
-        setDiplomes((p?.diplomes ?? []).join(", "));
-        setCompetences((p?.competences ?? []).join(", "));
-        setExperience(p?.experience ?? "");
-      })
-      .catch((e) => setErreur(e.message));
+    api<ProfilMoi>("/profils/moi").then((d) => {
+      setData(d);
+      if (d.profil) {
+        setForm({
+          niveauEtudes: d.profil.niveauEtudes ?? "",
+          filiereId: d.profil.filiereId ? String(d.profil.filiereId) : "",
+          etablissement: d.profil.etablissement ?? "",
+          diplomes: d.profil.diplomes.join(", "),
+          competences: d.profil.competences.join(", "),
+          experience: d.profil.experience ?? "",
+        });
+      }
+    }).catch((e) => setErreur(e.message));
   };
 
   useEffect(() => {
@@ -49,88 +66,221 @@ export default function CandidatProfil() {
     api<Filiere[]>("/filieres").then(setFilieres).catch(() => {});
   }, []);
 
-  const enregistrer = async (e: FormEvent) => {
+  const save = async (e: FormEvent) => {
     e.preventDefault();
-    setMessage("");
-    setErreur("");
+    setMessage(""); setErreur(""); setSaving(true);
     try {
       await api("/profils/moi", {
         method: "PUT",
         body: {
-          niveauEtudes: niveauEtudes || undefined,
-          filiereId: filiereId ? Number(filiereId) : null,
-          etablissement: etablissement || undefined,
-          diplomes: diplomes.split(",").map((s) => s.trim()).filter(Boolean),
-          competences: competences.split(",").map((s) => s.trim()).filter(Boolean),
-          experience: experience || undefined,
+          niveauEtudes: form.niveauEtudes || undefined,
+          filiereId: form.filiereId ? Number(form.filiereId) : undefined,
+          etablissement: form.etablissement || undefined,
+          diplomes: form.diplomes.split(",").map((s) => s.trim()).filter(Boolean),
+          competences: form.competences.split(",").map((s) => s.trim()).filter(Boolean),
+          experience: form.experience || undefined,
         },
       });
-      setMessage(t("profil.saved"));
+      setMessage("Profil enregistre avec succes");
       charger();
     } catch (e) {
       setErreur(e instanceof Error ? e.message : "Erreur");
+    } finally {
+      setSaving(false);
     }
   };
 
-  const envoyerCv = async () => {
-    const f = fichier.current?.files?.[0];
-    if (!f) return;
-    setErreur("");
-    const lire = new FileReader();
-    lire.onload = async () => {
-      try {
-        await api("/profils/moi/cv", { method: "POST", body: { nom: f.name, contenu: lire.result as string } });
-        setMessage(t("profil.saved"));
-        charger();
-      } catch (e) {
-        setErreur(e instanceof Error ? e.message : "Erreur");
-      }
-    };
-    lire.readAsDataURL(f);
+  const uploadCv = async (file: File) => {
+    if (file.size > 10 * 1024 * 1024) {
+      setCvMessage("Fichier trop volumineux (max 10 Mo)");
+      return;
+    }
+    if (file.type !== "application/pdf") {
+      setCvMessage("Seuls les fichiers PDF sont acceptes");
+      return;
+    }
+    setCvUploading(true);
+    setCvMessage("");
+    try {
+      const base64 = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => {
+          const result = reader.result as string;
+          resolve(result.split(",")[1] ?? result);
+        };
+        reader.onerror = () => reject(new Error("Lecture du fichier impossible"));
+        reader.readAsDataURL(file);
+      });
+      await api("/profils/moi/cv", { method: "POST", body: { cvPdf: base64, cvNom: file.name } });
+      setCvMessage(`CV "${file.name}" envoye avec succes`);
+      setCvFile(null);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+      charger();
+    } catch (e) {
+      setCvMessage(e instanceof Error ? e.message : "Erreur upload");
+    } finally {
+      setCvUploading(false);
+    }
   };
 
+  const surFichier = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const f = e.target.files?.[0];
+    if (f) {
+      setCvFile(f);
+      uploadCv(f);
+    }
+  };
+
+  const surDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setDragOver(false);
+    const f = e.dataTransfer.files?.[0];
+    if (f) {
+      setCvFile(f);
+      uploadCv(f);
+    }
+  };
+
+  if (!data && !erreur) return <p className="muted">Chargement...</p>;
+
   return (
-    <section>
-      <h2>{t("nav.profile")}</h2>
-      <form className="card" onSubmit={enregistrer} style={{ display: "grid", gap: ".4rem", maxWidth: 640 }}>
-        <label>{t("profil.level")}</label>
-        <input value={niveauEtudes} onChange={(e) => setNiveauEtudes(e.target.value)} placeholder="Licence, Master, Doctorat..." />
-
-        <label>{t("profil.field")}</label>
-        <select value={filiereId} onChange={(e) => setFiliereId(e.target.value)}>
-          <option value="">â€”</option>
-          {filieres.map((f) => <option key={f.id} value={f.id}>{f.code} - {f.intitule}</option>)}
-        </select>
-
-        <label>{t("profil.institution")}</label>
-        <input value={etablissement} onChange={(e) => setEtablissement(e.target.value)} />
-
-        <label>{t("profil.diplomas")}</label>
-        <input value={diplomes} onChange={(e) => setDiplomes(e.target.value)} />
-
-        <label>{t("profil.skills")}</label>
-        <input value={competences} onChange={(e) => setCompetences(e.target.value)} />
-
-        <label>{t("profil.experience")}</label>
-        <textarea rows={3} value={experience} onChange={(e) => setExperience(e.target.value)} />
-
-        {message && <p className="success">{message}</p>}
-        {erreur && <p className="error">{erreur}</p>}
-        <div><button type="submit">{t("common.save")}</button></div>
-      </form>
-
-      <div className="card" style={{ marginTop: "1rem", maxWidth: 640 }}>
-        <h3>{t("profil.cv")}</h3>
-        <p className="muted small">{donnees?.cvNom ?? "â€”"}</p>
-        <div className="actions-bar">
-          <input ref={fichier} type="file" accept="application/pdf" style={{ maxWidth: 320 }} />
-          <button type="button" className="secondary" onClick={envoyerCv}>{t("profil.uploadCv")}</button>
-          {donnees?.cvNom && (
-            <a className="link-button" href="/api/profils/moi/cv" target="_blank" rel="noreferrer">{t("profil.viewCv")}</a>
-          )}
+    <div>
+      <div className="pf-header">
+        <div className="pf-header-copy">
+          <h1>Mon profil</h1>
+          <p>Renseignez vos informations pour ameliorer vos recommandations.</p>
         </div>
-        <p className="muted small" style={{ marginTop: ".5rem" }}>Format PDF uniquement.</p>
       </div>
-    </section>
+
+      {erreur && <div className="pf-alert pf-alert-error" style={{ marginBottom: "1rem" }}>{erreur}</div>}
+
+      {/* CV upload */}
+      <div className="cand-profil-card">
+        <h3>Mon CV</h3>
+        {data?.profil?.aCv && !cvFile ? (
+          <div className="cand-cv-file">
+            <div className="cand-cv-file-icon">📄</div>
+            <div className="cand-cv-file-info">
+              <div className="cand-cv-file-name">{data.profil.cvNom ?? "CV.pdf"}</div>
+              <div className="cand-cv-file-size">CV uploade</div>
+            </div>
+            <div style={{ display: "flex", gap: ".4rem" }}>
+              <a
+                href="/api/profils/moi/cv"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="pf-btn"
+                style={{ padding: ".4rem .75rem", fontSize: ".8rem" }}
+              >
+                Telecharger
+              </a>
+              <button
+                type="button"
+                className="pf-btn pf-btn-ghost"
+                style={{ padding: ".4rem .75rem", fontSize: ".8rem" }}
+                onClick={() => fileInputRef.current?.click()}
+              >
+                Remplacer
+              </button>
+            </div>
+          </div>
+        ) : (
+          <div
+            className={`cand-cv-zone ${dragOver ? "dragging" : ""}`}
+            onClick={() => fileInputRef.current?.click()}
+            onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
+            onDragLeave={() => setDragOver(false)}
+            onDrop={surDrop}
+          >
+            <div className="cand-cv-icon">📄</div>
+            <div className="cand-cv-title">
+              {cvUploading ? "Envoi en cours..." : "Cliquez ou glissez votre CV"}
+            </div>
+            <div className="cand-cv-hint">PDF uniquement - max 10 Mo</div>
+          </div>
+        )}
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept=".pdf,application/pdf"
+          style={{ display: "none" }}
+          onChange={surFichier}
+        />
+        {cvMessage && (
+          <div className={`pf-alert ${cvMessage.includes("succes") ? "pf-alert-success" : "pf-alert-error"}`} style={{ marginTop: ".75rem" }}>
+            {cvMessage}
+          </div>
+        )}
+      </div>
+
+      {/* Formulaire profil */}
+      <form onSubmit={save}>
+        <div className="cand-profil-card">
+          <h3>Formation</h3>
+          <label>
+            Niveau d etudes
+            <input
+              value={form.niveauEtudes}
+              onChange={(e) => setForm({ ...form, niveauEtudes: e.target.value })}
+              placeholder="Licence 3, Master 1..."
+            />
+          </label>
+          <label>
+            Filiere
+            <select value={form.filiereId} onChange={(e) => setForm({ ...form, filiereId: e.target.value })}>
+              <option value="">-</option>
+              {filieres.map((f) => (
+                <option key={f.id} value={f.id}>{f.code} - {f.intitule}</option>
+              ))}
+            </select>
+          </label>
+          <label>
+            Etablissement
+            <input
+              value={form.etablissement}
+              onChange={(e) => setForm({ ...form, etablissement: e.target.value })}
+              placeholder="INSI, Universite d Antananarivo..."
+            />
+          </label>
+          <label>
+            Diplomes (separes par virgule)
+            <input
+              value={form.diplomes}
+              onChange={(e) => setForm({ ...form, diplomes: e.target.value })}
+              placeholder="Licence Informatique 2025, Baccalaureat 2022"
+            />
+          </label>
+        </div>
+
+        <div className="cand-profil-card">
+          <h3>Competences et experience</h3>
+          <label>
+            Competences (separes par virgule)
+            <input
+              value={form.competences}
+              onChange={(e) => setForm({ ...form, competences: e.target.value })}
+              placeholder="React, Node.js, PostgreSQL, Git"
+            />
+          </label>
+          <label>
+            Experience
+            <textarea
+              rows={4}
+              value={form.experience}
+              onChange={(e) => setForm({ ...form, experience: e.target.value })}
+              placeholder="Stages, projets, emplois precedents..."
+            />
+          </label>
+        </div>
+
+        {message && <div className="pf-alert pf-alert-success">{message}</div>}
+
+        <div style={{ display: "flex", justifyContent: "flex-end", marginTop: "1.5rem" }}>
+          <button type="submit" className="pf-btn pf-btn-primary" disabled={saving}>
+            {saving ? "Enregistrement..." : "Enregistrer mon profil"}
+          </button>
+        </div>
+      </form>
+    </div>
   );
 }
