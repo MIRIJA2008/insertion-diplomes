@@ -992,3 +992,43 @@ tbody tr:hover {
   }
   .home-hero-tagline::after { width: 48px; margin-top: .75rem; }
 }
+/* HERO — Typography upgrade (Sora + Playfair Display) */
+.home-hero h1.home-hero-title {
+  font-family: 'Sora', 'Inter', system-ui, -apple-system, sans-serif;
+  font-size: clamp(1.55rem, 2.9vw, 2.4rem);
+  font-weight: 800;
+  line-height: 1.12;
+  letter-spacing: -.025em;
+  margin: 1.25rem 0 .85rem;
+  max-width: 720px;
+}
+.home-hero-tagline {
+  font-family: 'Playfair Display', Georgia, 'Times New Roman', serif;
+  font-size: clamp(1.05rem, 1.8vw, 1.4rem);
+  font-style: italic;
+  font-weight: 600;
+  line-height: 1.45;
+  margin: 0 0 1.6rem;
+  max-width: 680px;
+}
+.home-hero-tagline .home-gradient-text {
+  display: inline;
+  background: linear-gradient(100deg, #a78bfa 0%, #f0abfc 45%, #67e8f9 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+.home-hero-tagline::after {
+  content: '';
+  display: block;
+  width: 64px;
+  height: 2px;
+  margin-top: 1rem;
+  background: linear-gradient(90deg, var(--fusion-violet), var(--fusion-cyan), transparent);
+  border-radius: 2px;
+}
+@media (max-width: 640px) {
+  .home-hero h1.home-hero-title { font-size: clamp(1.35rem, 5.2vw, 1.85rem); margin-top: 1rem; margin-bottom: .65rem; }
+  .home-hero-tagline { font-size: clamp(.98rem, 3.6vw, 1.15rem); margin-bottom: 1.25rem; }
+  .home-hero-tagline::after { width: 48px; margin-top: .75rem; }
+}
