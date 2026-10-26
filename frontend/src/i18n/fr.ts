@@ -34,7 +34,7 @@ export const fr = {
   "common.close": "Fermer",
   "common.language": "Langue",
   "common.theme": "Theme",
-  "home.heroTitle": "Trouvez un emploi adapte a votre diplome",
+  "home.heroTitle": "Nous vous aidons a trouver l'emploi qui correspond a votre parcours.",
   "home.heroSubtitle": "La plateforme nationale de suivi de l'insertion professionnelle des diplomes : offres d'emploi, communautes et outils pour les diplomes et les organismes recruteurs.",
   "home.searchPlaceholder": "Rechercher un poste, une competence, une organisation...",
   "home.ctaSearch": "Explorer les offres",

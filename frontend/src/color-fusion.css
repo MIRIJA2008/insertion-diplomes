@@ -1032,3 +1032,66 @@ tbody tr:hover {
   .home-hero-tagline { font-size: clamp(.98rem, 3.6vw, 1.15rem); margin-bottom: 1.25rem; }
   .home-hero-tagline::after { width: 48px; margin-top: .75rem; }
 }
+/* ═══════════════════════════════════════════════════════
+   ESPACE CANDIDAT — style Fusion (aligne sur Home / Recruteur)
+   ═══════════════════════════════════════════════════════ */
+.cand-hero { position: relative; padding: clamp(1.5rem, 4vw, 2.75rem); border-radius: 22px; background: radial-gradient(ellipse at 0% 0%, #06b6d426, transparent 45%), radial-gradient(ellipse at 100% 100%, #8b5cf620, transparent 45%), var(--surface); border: 1px solid var(--bord); margin-bottom: 2rem; overflow: hidden; }
+.cand-hero h1 { margin: 0 0 .5rem; font-size: clamp(1.6rem, 3vw, 2.2rem); letter-spacing: -.04em; }
+.cand-hero p { margin: 0; color: var(--texte-muet); line-height: 1.7; max-width: 680px; }
+.cand-hero-actions { display: flex; flex-wrap: wrap; gap: .75rem; margin-top: 1.5rem; }
+
+.cand-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 1rem; margin-bottom: 2rem; }
+.cand-stat { padding: 1.35rem 1.5rem; border-radius: 18px; background: var(--surface); border: 1px solid var(--bord); }
+.cand-stat-label { font-size: .72rem; text-transform: uppercase; letter-spacing: .08em; color: var(--texte-muet); font-weight: 700; margin-bottom: .5rem; }
+.cand-stat-value { font-size: 2rem; font-weight: 800; letter-spacing: -.04em; line-height: 1.1; }
+.cand-stat-hint { margin-top: .35rem; font-size: .78rem; color: var(--texte-muet); }
+
+/* Barre de completion de profil */
+.cand-progress-card { padding: 1.5rem; border-radius: 18px; background: var(--surface); border: 1px solid var(--bord); margin-bottom: 2rem; }
+.cand-progress-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: .85rem; }
+.cand-progress-header h3 { margin: 0; font-size: 1.05rem; }
+.cand-progress-value { font-weight: 800; font-size: 1.25rem; }
+.cand-progress-bar { height: 10px; border-radius: 999px; background: var(--surface-2); overflow: hidden; margin-bottom: 1rem; }
+.cand-progress-fill { height: 100%; border-radius: 999px; background: linear-gradient(90deg, var(--fusion-violet), var(--fusion-cyan)); transition: width .4s ease; }
+.cand-progress-checklist { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: .5rem; margin-bottom: 1rem; }
+.cand-progress-item { display: flex; align-items: center; gap: .5rem; font-size: .85rem; color: var(--texte-muet); }
+.cand-progress-item.done { color: var(--texte); }
+.cand-progress-item.done::before { content: "✓"; color: var(--fusion-cyan); font-weight: 800; }
+.cand-progress-item::before { content: "○"; color: var(--texte-muet); font-weight: 800; }
+
+/* Sections */
+.cand-section-title { display: flex; justify-content: space-between; align-items: baseline; margin: 2rem 0 1rem; }
+.cand-section-title h2 { margin: 0; font-size: 1.35rem; letter-spacing: -.03em; }
+.cand-section-title a { color: var(--fusion-cyan); text-decoration: none; font-size: .88rem; font-weight: 650; }
+
+/* Liste candidatures compacte */
+.cand-list { display: flex; flex-direction: column; gap: .85rem; }
+.cand-item { display: flex; align-items: center; gap: 1rem; padding: 1.1rem 1.25rem; border-radius: 16px; background: var(--surface); border: 1px solid var(--bord); text-decoration: none; color: inherit; transition: all .2s ease; }
+.cand-item:hover { transform: translateY(-2px); border-color: color-mix(in srgb, var(--fusion-cyan) 45%, transparent); box-shadow: 0 12px 28px #00000030; }
+.cand-item-body { flex: 1; min-width: 0; }
+.cand-item-title { font-weight: 700; font-size: .95rem; margin-bottom: .25rem; }
+.cand-item-meta { font-size: .82rem; color: var(--texte-muet); }
+
+/* Badges statut (timeline) */
+.cand-badge { display: inline-flex; align-items: center; gap: .35rem; padding: .35rem .75rem; border-radius: 999px; font-size: .75rem; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; white-space: nowrap; }
+.cand-badge-envoyee { background: color-mix(in srgb, #60a5fa 15%, transparent); color: #60a5fa; border: 1px solid color-mix(in srgb, #60a5fa 45%, transparent); }
+.cand-badge-vue { background: color-mix(in srgb, #a78bfa 15%, transparent); color: #a78bfa; border: 1px solid color-mix(in srgb, #a78bfa 45%, transparent); }
+.cand-badge-acceptee { background: color-mix(in srgb, #34d399 15%, transparent); color: #34d399; border: 1px solid color-mix(in srgb, #34d399 45%, transparent); }
+.cand-badge-refusee { background: color-mix(in srgb, #fb7185 15%, transparent); color: #fb7185; border: 1px solid color-mix(in srgb, #fb7185 45%, transparent); }
+
+/* Timeline detaillee pour Suivi */
+.cand-timeline { display: flex; gap: .35rem; align-items: center; margin-top: .5rem; }
+.cand-timeline-step { width: 28px; height: 6px; border-radius: 999px; background: var(--surface-2); }
+.cand-timeline-step.done { background: linear-gradient(90deg, var(--fusion-violet), var(--fusion-cyan)); }
+
+/* Tabs filtres */
+.cand-tabs { display: flex; flex-wrap: wrap; gap: .5rem; margin-bottom: 1.5rem; }
+.cand-tab { padding: .5rem 1rem; border-radius: 999px; border: 1px solid var(--bord); background: var(--surface); color: var(--texte-muet); font-size: .82rem; font-weight: 650; cursor: pointer; transition: all .2s ease; }
+.cand-tab.active { background: linear-gradient(110deg, var(--fusion-cyan), var(--fusion-violet)); border-color: transparent; color: #fff; }
+.cand-tab:hover { border-color: color-mix(in srgb, var(--fusion-cyan) 45%, transparent); }
+
+@media (max-width: 600px) {
+  .cand-stats { grid-template-columns: 1fr 1fr; }
+  .cand-stat-value { font-size: 1.5rem; }
+  .cand-item { flex-wrap: wrap; }
+}
