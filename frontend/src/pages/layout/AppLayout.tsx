@@ -62,6 +62,7 @@ function Contenu() {
             <NavLink to="/recruteur/organisme">{t("nav.organization")}</NavLink>
             <NavLink to="/recruteur/offres">{t("nav.myOffers")}</NavLink>
             <NavLink to="/recruteur/candidatures">{t("nav.received")}</NavLink>
+            <NavLink to="/recruteur/pipeline">Pipeline</NavLink>
             <NavLink to="/communautes">{t("nav.communities")}</NavLink>
             <NavLink to="/messages">{t("nav.messages")}</NavLink>
           </>

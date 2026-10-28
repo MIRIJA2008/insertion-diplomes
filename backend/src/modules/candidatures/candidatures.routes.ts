@@ -144,3 +144,49 @@ candidaturesRoutes.get("/mes-favoris", authenticate, async (req, res, next) => {
     next(e);
   }
 });
+// Pipeline recruteur : candidatures groupees par statut + filtres
+candidaturesRoutes.get("/recruteur/pipeline", authenticate, requireRole("RECRUTEUR", "ADMIN"), async (req, res, next) => {
+  try {
+    const { offreId } = req.query;
+    const organisme = await prisma.organisme.findUnique({ where: { utilisateurId: req.user!.id } });
+    if (!organisme) {
+      return res.json({ ENVOYEE: [], VUE: [], ACCEPTEE: [], REFUSEE: [], stats: { total: 0, parStatut: {} } });
+    }
+
+    const where: any = { offre: { organismeId: organisme.id } };
+    if (offreId) where.offreId = Number(offreId);
+
+    const candidatures = await prisma.candidature.findMany({
+      where,
+      include: {
+        offre: { select: { id: true, titre: true, lieu: true, typeContrat: true } },
+        candidat: {
+          select: {
+            id: true, nom: true, email: true,
+            profilCandidat: { select: { filiereId: true, niveauEtudes: true, competences: true } },
+          },
+        },
+      },
+      orderBy: { dateEnvoi: "desc" },
+    });
+
+    // Grouper par statut
+    const grouped = { ENVOYEE: [], VUE: [], ACCEPTEE: [], REFUSEE: [] } as any;
+    for (const c of candidatures) {
+      if (grouped[c.statut]) grouped[c.statut].push(c);
+    }
+
+    // Stats
+    const stats = {
+      total: candidatures.length,
+      parStatut: {
+        ENVOYEE: grouped.ENVOYEE.length,
+        VUE: grouped.VUE.length,
+        ACCEPTEE: grouped.ACCEPTEE.length,
+        REFUSEE: grouped.REFUSEE.length,
+      },
+    };
+
+    res.json({ ...grouped, stats });
+  } catch (e) { next(e); }
+});

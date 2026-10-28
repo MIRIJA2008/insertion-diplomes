@@ -19,6 +19,7 @@ import CandidatFavoris from "./pages/candidat/Favoris";
 import CandidatParametres from "./pages/candidat/Parametres";
 import RecruteurAccueil from "./pages/recruteur/Accueil";
 import RecruteurMesOffres from "./pages/recruteur/MesOffres";
+import RecruteurPipeline from "./pages/recruteur/Pipeline";
 import RecruteurRecu from "./pages/recruteur/Recu";
 import RecruteurOrganisme from "./pages/recruteur/Organisme";
 import RecruteurCandidatDetail from "./pages/recruteur/CandidatDetail";

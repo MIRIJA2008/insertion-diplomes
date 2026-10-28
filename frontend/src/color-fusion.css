@@ -1181,3 +1181,47 @@ tbody tr:hover {
   .cand-detail-grid { grid-template-columns: 1fr; }
   .cand-detail-side { position: static; }
 }
+
+/* ═══════════════════════════════════════════════════════
+   PIPELINE RECRUTEUR — Vue kanban
+   ═══════════════════════════════════════════════════════ */
+.pipe-filters { display: flex; flex-wrap: wrap; gap: .75rem; align-items: center; margin-bottom: 1.5rem; }
+.pipe-filters select { padding: .65rem .9rem; border-radius: 10px; border: 1px solid var(--bord); background: var(--surface); color: var(--texte); font-size: .9rem; min-width: 220px; }
+
+.pipe-kanban { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 1rem; align-items: start; }
+.pipe-col { padding: 1rem; border-radius: 18px; background: var(--surface-2); border: 1px solid var(--bord); min-height: 200px; }
+.pipe-col-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; padding-bottom: .75rem; border-bottom: 1px solid var(--bord); }
+.pipe-col-title { font-weight: 750; font-size: .92rem; }
+.pipe-col-count { display: inline-flex; align-items: center; justify-content: center; min-width: 24px; height: 24px; padding: 0 .45rem; border-radius: 999px; background: var(--surface); border: 1px solid var(--bord); font-size: .78rem; font-weight: 700; }
+
+.pipe-col-envoyee .pipe-col-title { color: #60a5fa; }
+.pipe-col-vue .pipe-col-title { color: #a78bfa; }
+.pipe-col-acceptee .pipe-col-title { color: #34d399; }
+.pipe-col-refusee .pipe-col-title { color: #fb7185; }
+
+.pipe-card { padding: 1rem; border-radius: 14px; background: var(--surface); border: 1px solid var(--bord); margin-bottom: .75rem; transition: all .2s ease; }
+.pipe-card:hover { border-color: color-mix(in srgb, var(--fusion-cyan) 45%, transparent); box-shadow: 0 8px 20px #00000030; }
+.pipe-card:last-child { margin-bottom: 0; }
+.pipe-card-top { display: flex; gap: .75rem; align-items: center; margin-bottom: .65rem; }
+.pipe-card-body { flex: 1; min-width: 0; }
+.pipe-card-name { font-weight: 700; font-size: .92rem; margin-bottom: .15rem; }
+.pipe-card-offre { font-size: .78rem; color: var(--texte-muet); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pipe-card-date { font-size: .72rem; color: var(--texte-muet); margin-bottom: .65rem; }
+.pipe-card-actions { display: flex; gap: .35rem; flex-wrap: wrap; }
+.pipe-card-actions .pf-btn { padding: .3rem .6rem; font-size: .74rem; }
+.pipe-card-actions .pf-btn-success { background: color-mix(in srgb, #34d399 15%, var(--surface)); border-color: color-mix(in srgb, #34d399 45%, transparent); color: #34d399; }
+.pipe-card-actions .pf-btn-success:hover { background: #34d399; color: #fff; }
+.pipe-card-actions .pf-btn-danger { background: color-mix(in srgb, #fb7185 15%, var(--surface)); border-color: color-mix(in srgb, #fb7185 45%, transparent); color: #fb7185; }
+.pipe-card-actions .pf-btn-danger:hover { background: #fb7185; color: #fff; }
+.pipe-card-actions .pf-btn-view { background: color-mix(in srgb, #a78bfa 15%, var(--surface)); border-color: color-mix(in srgb, #a78bfa 45%, transparent); color: #a78bfa; }
+.pipe-card-actions .pf-btn-view:hover { background: #a78bfa; color: #fff; }
+
+.pipe-empty { padding: 1.5rem .75rem; text-align: center; color: var(--texte-muet); font-size: .82rem; border: 1px dashed var(--bord); border-radius: 12px; }
+
+.pipe-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: .75rem; margin-bottom: 1.5rem; }
+.pipe-stat { padding: .85rem 1rem; border-radius: 12px; background: var(--surface); border: 1px solid var(--bord); }
+.pipe-stat-label { font-size: .7rem; text-transform: uppercase; letter-spacing: .08em; color: var(--texte-muet); font-weight: 700; margin-bottom: .25rem; }
+.pipe-stat-value { font-size: 1.5rem; font-weight: 800; letter-spacing: -.03em; }
+
+@media (max-width: 1100px) { .pipe-kanban { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 600px) { .pipe-kanban { grid-template-columns: 1fr; } }
