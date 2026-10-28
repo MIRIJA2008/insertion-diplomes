@@ -1,0 +1,321 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  ADMIN
+  CONSULTANT
+  CANDIDAT
+  RECRUTEUR
+}
+
+enum StatutCampagne {
+  BROUILLON
+  OUVERTE
+  CLOTUREE
+}
+
+enum Situation {
+  EMPLOI_SALARIE
+  EMPLOI_INDEPENDANT
+  POURSUITE_ETUDES
+  RECHERCHE_EMPLOI
+  AUTRE
+}
+
+enum TypeContrat {
+  CDI
+  CDD
+  STAGE
+  INDEPENDANT
+  OCCASIONNEL
+}
+
+enum StatutCandidature {
+  ENVOYEE
+  VUE
+  ACCEPTEE
+  REFUSEE
+}
+
+enum TypeOrganisme {
+  MINISTERE
+  ADMINISTRATION
+  ENTREPRISE_PRIVEE
+  ONG
+  AUTRE
+}
+
+enum TypeConversation {
+  DIRECT
+  GROUPE
+}
+
+model Utilisateur {
+  id             Int      @id @default(autoincrement())
+  nom            String
+  email          String   @unique
+  motDePasseHash String
+  role           Role     @default(CONSULTANT)
+  langue         String   @default("fr")
+  couleurAccent  String   @default("bleu")
+  creeLe         DateTime @default(now())
+
+  profilCandidat     ProfilCandidat?
+  organisme          Organisme?
+  candidatures       Candidature[]
+  favoris            Favori[]
+  messages           Message[]
+  messagesCommunaute MessageCommunaute[]
+  notifications      Notification[]
+  communautes        CommunauteMembre[]
+  communautesCrees   Communaute[]         @relation("CommunauteCreateur")
+  conversations      ConversationMembre[]
+
+  @@map("utilisateurs")
+}
+
+model ProfilCandidat {
+  id            Int         @id @default(autoincrement())
+  utilisateurId Int         @unique
+  utilisateur   Utilisateur @relation(fields: [utilisateurId], references: [id], onDelete: Cascade)
+  niveauEtudes  String?
+  filiereId     Int?
+  filiere       Filiere?    @relation(fields: [filiereId], references: [id], onDelete: SetNull)
+  etablissement String?
+  diplomes      String[]
+  competences   String[]
+  experience    String?
+  cvPdf         Bytes?
+  cvNom         String?
+  photo         Bytes?
+  majLe         DateTime    @updatedAt
+
+  @@map("profils_candidats")
+}
+
+model Organisme {
+  id            Int           @id @default(autoincrement())
+  utilisateurId Int           @unique
+  utilisateur   Utilisateur   @relation(fields: [utilisateurId], references: [id], onDelete: Cascade)
+  nom           String
+  type          TypeOrganisme @default(AUTRE)
+  description   String?
+  ville         String?
+  verifie       Boolean       @default(false)
+  offres        Offre[]
+
+  @@map("organismes")
+}
+
+model Offre {
+  id                     Int           @id @default(autoincrement())
+  organismeId            Int
+  organisme              Organisme     @relation(fields: [organismeId], references: [id], onDelete: Cascade)
+  titre                  String
+  description            String
+  niveauRequis           String?
+  filiereId              Int?
+  filiere                Filiere?      @relation(fields: [filiereId], references: [id], onDelete: SetNull)
+  competencesRecherchees String[]
+  profilRecherche        String?
+  lieu                   String
+  typeContrat            TypeContrat?
+  dateLimite             DateTime
+  creeLe                 DateTime      @default(now())
+  candidatures           Candidature[]
+  favoris                Favori[]
+
+  @@map("offres")
+}
+
+model Candidature {
+  id         Int               @id @default(autoincrement())
+  offreId    Int
+  offre      Offre             @relation(fields: [offreId], references: [id], onDelete: Cascade)
+  candidatId Int
+  candidat   Utilisateur       @relation(fields: [candidatId], references: [id], onDelete: Cascade)
+  lettre     String?
+  statut     StatutCandidature @default(ENVOYEE)
+  dateEnvoi  DateTime          @default(now())
+
+  @@unique([offreId, candidatId])
+  @@map("candidatures")
+}
+
+model Favori {
+  id            Int         @id @default(autoincrement())
+  offreId       Int
+  offre         Offre       @relation(fields: [offreId], references: [id], onDelete: Cascade)
+  utilisateurId Int
+  utilisateur   Utilisateur @relation(fields: [utilisateurId], references: [id], onDelete: Cascade)
+
+  @@unique([offreId, utilisateurId])
+  @@map("favoris")
+}
+
+model Communaute {
+  id          Int                 @id @default(autoincrement())
+  nom         String
+  description String?
+  domaine     String?
+  filiereId   Int?
+  filiere     Filiere?            @relation(fields: [filiereId], references: [id], onDelete: SetNull)
+  creeParId   Int
+  creePar     Utilisateur         @relation("CommunauteCreateur", fields: [creeParId], references: [id])
+  creeLe      DateTime            @default(now())
+  membres     CommunauteMembre[]
+  messages    MessageCommunaute[]
+
+  @@map("communautes")
+}
+
+model CommunauteMembre {
+  communauteId  Int
+  communaute    Communaute  @relation(fields: [communauteId], references: [id], onDelete: Cascade)
+  utilisateurId Int
+  utilisateur   Utilisateur @relation(fields: [utilisateurId], references: [id], onDelete: Cascade)
+  rejointLe     DateTime    @default(now())
+
+  @@id([communauteId, utilisateurId])
+  @@map("communaute_membres")
+}
+
+model MessageCommunaute {
+  id           Int         @id @default(autoincrement())
+  communauteId Int
+  communaute   Communaute  @relation(fields: [communauteId], references: [id], onDelete: Cascade)
+  auteurId     Int
+  auteur       Utilisateur @relation(fields: [auteurId], references: [id], onDelete: Cascade)
+  contenu      String
+  envoyeLe     DateTime    @default(now())
+
+  @@map("messages_communaute")
+}
+
+model Conversation {
+  id       Int                  @id @default(autoincrement())
+  type     TypeConversation     @default(DIRECT)
+  creeLe   DateTime             @default(now())
+  membres  ConversationMembre[]
+  messages Message[]
+
+  @@map("conversations")
+}
+
+model ConversationMembre {
+  conversationId Int
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  utilisateurId  Int
+  utilisateur    Utilisateur  @relation(fields: [utilisateurId], references: [id], onDelete: Cascade)
+
+  @@id([conversationId, utilisateurId])
+  @@map("conversation_membres")
+}
+
+model Message {
+  id             Int          @id @default(autoincrement())
+  conversationId Int
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  auteurId       Int
+  auteur         Utilisateur  @relation(fields: [auteurId], references: [id], onDelete: Cascade)
+  contenu        String
+  envoyeLe       DateTime     @default(now())
+
+  @@map("messages")
+}
+
+model Notification {
+  id            Int         @id @default(autoincrement())
+  utilisateurId Int
+  utilisateur   Utilisateur @relation(fields: [utilisateurId], references: [id], onDelete: Cascade)
+  titre         String
+  contenu       String
+  lue           Boolean     @default(false)
+  creeLe        DateTime    @default(now())
+
+  @@map("notifications")
+}
+
+model Filiere {
+  id          Int              @id @default(autoincrement())
+  code        String           @unique
+  intitule    String
+  niveau      String
+  promotions  Promotion[]
+  profils     ProfilCandidat[]
+  offres      Offre[]
+  communautes Communaute[]
+
+  @@map("filieres")
+}
+
+model Promotion {
+  id          Int       @id @default(autoincrement())
+  filiereId   Int
+  filiere     Filiere   @relation(fields: [filiereId], references: [id], onDelete: Restrict)
+  anneeSortie Int
+  effectif    Int?
+  diplomes    Diplome[]
+
+  @@unique([filiereId, anneeSortie])
+  @@map("promotions")
+}
+
+model Diplome {
+  id          Int          @id @default(autoincrement())
+  nom         String
+  prenom      String
+  promotionId Int
+  promotion   Promotion    @relation(fields: [promotionId], references: [id], onDelete: Restrict)
+  contact     String?
+  invitations Invitation[]
+
+  @@map("diplomes")
+}
+
+model Campagne {
+  id          Int            @id @default(autoincrement())
+  titre       String
+  dateDebut   DateTime
+  dateFin     DateTime
+  statut      StatutCampagne @default(BROUILLON)
+  invitations Invitation[]
+
+  @@map("campagnes")
+}
+
+model Invitation {
+  id         Int      @id @default(autoincrement())
+  campagneId Int
+  campagne   Campagne @relation(fields: [campagneId], references: [id], onDelete: Cascade)
+  diplomeId  Int
+  diplome    Diplome  @relation(fields: [diplomeId], references: [id], onDelete: Cascade)
+  jeton      String   @unique
+  reponse    Reponse?
+
+  @@unique([campagneId, diplomeId])
+  @@map("invitations")
+}
+
+model Reponse {
+  id                  Int          @id @default(autoincrement())
+  invitationId        Int          @unique
+  invitation          Invitation   @relation(fields: [invitationId], references: [id], onDelete: Cascade)
+  situation           Situation
+  secteur             String?
+  typeContrat         TypeContrat?
+  delaiInsertionMois  Int?
+  ville               String
+  adequationFormation Int?
+  remarque            String?
+  consentement        Boolean
+  soumiseLe           DateTime     @default(now())
+
+  @@map("reponses")
+}
