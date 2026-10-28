@@ -69,6 +69,7 @@ model Utilisateur {
   profilCandidat     ProfilCandidat?
   organisme          Organisme?
   candidatures       Candidature[]
+  historiqueCandidatures CandidatureHistorique[] @relation("HistoriqueAuteur")
   favoris            Favori[]
   messages           Message[]
   messagesCommunaute MessageCommunaute[]
@@ -143,10 +144,25 @@ model Candidature {
   lettre     String?
   statut     StatutCandidature @default(ENVOYEE)
   dateEnvoi  DateTime          @default(now())
+  historique  CandidatureHistorique[]
 
   @@unique([offreId, candidatId])
   @@map("candidatures")
 }
+model CandidatureHistorique {
+  id            Int                @id @default(autoincrement())
+  candidatureId Int
+  candidature   Candidature        @relation(fields: [candidatureId], references: [id], onDelete: Cascade)
+  ancienStatut  StatutCandidature?
+  nouveauStatut StatutCandidature
+  commentaire   String?
+  auteurId      Int
+  auteur        Utilisateur        @relation("HistoriqueAuteur", fields: [auteurId], references: [id])
+  creeLe        DateTime           @default(now())
+
+  @@map("candidature_historique")
+}
+
 
 model Favori {
   id            Int         @id @default(autoincrement())

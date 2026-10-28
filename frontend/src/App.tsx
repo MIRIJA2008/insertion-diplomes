@@ -11,6 +11,7 @@ import Enquete from "./pages/Enquete";
 import Dashboard from "./pages/Dashboard";
 import Filieres from "./pages/Filieres";
 import Campagnes from "./pages/Campagnes";
+import CandidatureDetail from "./pages/candidat/CandidatureDetail";
 import CandidatAccueil from "./pages/candidat/Accueil";
 import CandidatProfil from "./pages/candidat/Profil";
 import CandidatSuivi from "./pages/candidat/Suivi";
@@ -61,6 +62,7 @@ export default function App() {
           <Route path="/candidat" element={<CandidatAccueil />} />
           <Route path="/candidat/profil" element={<CandidatProfil />} />
           <Route path="/candidat/candidatures" element={<CandidatSuivi />} />
+          <Route path="/candidat/candidature/:id" element={<CandidatureDetail />} />
           <Route path="/candidat/favoris" element={<CandidatFavoris />} />
           <Route path="/candidat/parametres" element={<CandidatParametres />} />
         </Route>
@@ -69,6 +71,7 @@ export default function App() {
           <Route path="/recruteur" element={<RecruteurAccueil />} />
           <Route path="/recruteur/offres" element={<RecruteurMesOffres />} />
           <Route path="/recruteur/candidatures" element={<RecruteurRecu />} />
+          <Route path="/recruteur/candidature/:id" element={<CandidatureDetail />} />
           <Route path="/recruteur/organisme" element={<RecruteurOrganisme />} />
           <Route path="/recruteur/candidat/:id" element={<RecruteurCandidatDetail />} />
         </Route>

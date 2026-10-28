@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { Link } from "react-router-dom";
 import { api, type Candidature } from "../../api";
 import { useI18n } from "../../i18n";
 
@@ -14,9 +15,7 @@ const STATUT_LABEL: Record<string, string> = {
   ENVOYEE: "Envoyee", VUE: "Vue", ACCEPTEE: "Acceptee", REFUSEE: "Refusee",
 };
 
-const STATUT_ORDER: Record<string, number> = {
-  ENVOYEE: 1, VUE: 2, ACCEPTEE: 3, REFUSEE: 3,
-};
+const STATUT_ORDER: Record<string, number> = { ENVOYEE: 1, VUE: 2, ACCEPTEE: 3, REFUSEE: 3 };
 
 function badgeClass(statut: string) {
   const s = statut.toLowerCase();
@@ -26,17 +25,13 @@ function badgeClass(statut: string) {
   return "cand-badge cand-badge-envoyee";
 }
 
-function etapesAtteintes(statut: string) {
-  return STATUT_ORDER[statut] ?? 1;
-}
+function etapesAtteintes(statut: string) { return STATUT_ORDER[statut] ?? 1; }
 
 function Timeline({ statut }: { statut: string }) {
   const n = etapesAtteintes(statut);
   return (
     <div className="cand-timeline">
-      {[1, 2, 3].map((i) => (
-        <div key={i} className={`cand-timeline-step ${i <= n ? "done" : ""}`} />
-      ))}
+      {[1, 2, 3].map((i) => <div key={i} className={`cand-timeline-step ${i <= n ? "done" : ""}`} />)}
     </div>
   );
 }
@@ -78,32 +73,16 @@ export default function CandidatSuivi() {
 
       {all !== null && all.length > 0 && (
         <div className="cand-stats" style={{ marginBottom: "1.5rem" }}>
-          <div className="cand-stat">
-            <div className="cand-stat-label">Total</div>
-            <div className="cand-stat-value">{stats.total}</div>
-          </div>
-          <div className="cand-stat">
-            <div className="cand-stat-label">En attente</div>
-            <div className="cand-stat-value">{stats.envoyees + stats.vues}</div>
-          </div>
-          <div className="cand-stat">
-            <div className="cand-stat-label">Acceptees</div>
-            <div className="cand-stat-value" style={{ color: "#34d399" }}>{stats.acceptees}</div>
-          </div>
-          <div className="cand-stat">
-            <div className="cand-stat-label">Refusees</div>
-            <div className="cand-stat-value" style={{ color: "#fb7185" }}>{stats.refusees}</div>
-          </div>
+          <div className="cand-stat"><div className="cand-stat-label">Total</div><div className="cand-stat-value">{stats.total}</div></div>
+          <div className="cand-stat"><div className="cand-stat-label">En attente</div><div className="cand-stat-value">{stats.envoyees + stats.vues}</div></div>
+          <div className="cand-stat"><div className="cand-stat-label">Acceptees</div><div className="cand-stat-value" style={{ color: "#34d399" }}>{stats.acceptees}</div></div>
+          <div className="cand-stat"><div className="cand-stat-label">Refusees</div><div className="cand-stat-value" style={{ color: "#fb7185" }}>{stats.refusees}</div></div>
         </div>
       )}
 
       <div className="cand-tabs">
         {STATUTS.map((s) => (
-          <button
-            key={s.key}
-            className={`cand-tab ${filtre === s.key ? "active" : ""}`}
-            onClick={() => setFiltre(s.key)}
-          >
+          <button key={s.key} className={`cand-tab ${filtre === s.key ? "active" : ""}`} onClick={() => setFiltre(s.key)}>
             {s.label}
           </button>
         ))}
@@ -115,7 +94,7 @@ export default function CandidatSuivi() {
           <div className="pf-empty-icon">📝</div>
           <h3>Aucune candidature pour le moment</h3>
           <p>Explorez les offres et postulez a celles qui vous correspondent.</p>
-          <a href="/offres" className="pf-btn pf-btn-primary">Explorer les offres</a>
+          <Link to="/offres" className="pf-btn pf-btn-primary">Explorer les offres</Link>
         </div>
       )}
       {filtered !== null && filtered.length === 0 && all !== null && all.length > 0 && (
@@ -124,7 +103,7 @@ export default function CandidatSuivi() {
       {filtered !== null && filtered.length > 0 && (
         <div className="cand-list">
           {filtered.map((c: any) => (
-            <div key={c.id} className="cand-item">
+            <Link key={c.id} to={`/candidat/candidature/${c.id}`} className="cand-item">
               <div className="rec-avatar" style={{ background: "linear-gradient(135deg, var(--fusion-cyan), var(--fusion-violet))" }}>
                 {(c.offre?.titre ?? "?").slice(0, 2).toUpperCase()}
               </div>
@@ -136,7 +115,7 @@ export default function CandidatSuivi() {
                 <Timeline statut={c.statut} />
               </div>
               <span className={badgeClass(c.statut)}>{STATUT_LABEL[c.statut] ?? c.statut}</span>
-            </div>
+            </Link>
           ))}
         </div>
       )}

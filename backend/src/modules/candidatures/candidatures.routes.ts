@@ -23,6 +23,15 @@ candidaturesRoutes.post("/offres/:id/postuler", authenticate, requireRole("CANDI
     const candidature = await prisma.candidature.create({
       data: { offreId: offre.id, candidatId: req.user!.id, lettre },
     });
+    await prisma.candidatureHistorique.create({
+      data: {
+        candidatureId: candidature.id,
+        ancienStatut: null,
+        nouveauStatut: "ENVOYEE",
+        commentaire: "Candidature envoyee",
+        auteurId: req.user!.id,
+      },
+    });
     const org = await prisma.organisme.findUnique({ where: { id: offre.organismeId } });
     if (org) {
       await prisma.notification.create({
@@ -75,7 +84,7 @@ candidaturesRoutes.get("/recruteur/candidatures", authenticate, requireRole("REC
 // Changer le statut d'une candidature (recruteur)
 candidaturesRoutes.patch("/candidatures/:id/statut", authenticate, requireRole("RECRUTEUR", "ADMIN"), async (req, res, next) => {
   try {
-    const { statut } = z.object({ statut: z.enum(["ENVOYEE", "VUE", "ACCEPTEE", "REFUSEE"]) }).parse(req.body);
+    const { statut, commentaire } = z.object({ statut: z.enum(["ENVOYEE", "VUE", "ACCEPTEE", "REFUSEE"]), commentaire: z.string().max(500).optional() }).parse(req.body);
     const c = await prisma.candidature.findUnique({
       where: { id: Number(req.params.id) },
       include: { offre: { include: { organisme: true } } },
@@ -83,6 +92,15 @@ candidaturesRoutes.patch("/candidatures/:id/statut", authenticate, requireRole("
     if (!c) throw new HttpError(404, "Candidature introuvable");
     if (req.user!.role !== "ADMIN" && c.offre.organisme.utilisateurId !== req.user!.id) throw new HttpError(403, "Acces refuse");
     const maj = await prisma.candidature.update({ where: { id: c.id }, data: { statut } });
+    await prisma.candidatureHistorique.create({
+      data: {
+        candidatureId: c.id,
+        ancienStatut: c.statut,
+        nouveauStatut: statut,
+        commentaire: commentaire ?? null,
+        auteurId: req.user!.id,
+      },
+    });
     await prisma.notification.create({
       data: {
         utilisateurId: c.candidatId,
