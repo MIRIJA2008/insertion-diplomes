@@ -50,6 +50,7 @@ function Contenu() {
             <NavLink to="/candidat/profil">{t("nav.profile")}</NavLink>
             <NavLink to="/candidat/candidatures">{t("nav.applications")}</NavLink>
             <NavLink to="/candidat/favoris">{t("nav.favorites")}</NavLink>
+            <NavLink to="/candidat/alertes">Alertes</NavLink>
             <NavLink to="/communautes">{t("nav.communities")}</NavLink>
             <NavLink to="/messages">{t("nav.messages")}</NavLink>
             <NavLink to="/candidat/parametres">{t("nav.settings")}</NavLink>

@@ -18,6 +18,7 @@ import { publicRoutes } from "./modules/public/public.routes";
 import { notificationsRoutes } from "./modules/notifications/notifications.routes";
 import { communautesRoutes } from "./modules/communautes/communautes.routes";
 import { messagerieRoutes } from "./modules/messagerie/messagerie.routes";
+import { alertesRoutes } from "./modules/alertes/alertes.routes";
 import { errorHandler } from "./middlewares/errorHandler";
 
 export const app = express();
@@ -59,6 +60,7 @@ app.use("/api/public", publicRoutes);
 app.use("/api/notifications", notificationsRoutes);
 app.use("/api/communautes", communautesRoutes);
 app.use("/api/messagerie", messagerieRoutes);
+app.use("/api/alertes", alertesRoutes);
 
 app.use((_req, res) => {
   res.status(404).json({ error: "Route introuvable" });

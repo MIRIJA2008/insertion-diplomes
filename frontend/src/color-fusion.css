@@ -1251,3 +1251,24 @@ tbody tr:hover {
 .notif-page-empty-icon { font-size: 3rem; margin-bottom: 1rem; opacity: .4; }
 
 .notif-badge-header { display: inline-flex; align-items: center; justify-content: center; min-width: 18px; height: 18px; padding: 0 .35rem; border-radius: 999px; background: #fb7185; color: #fff; font-size: .68rem; font-weight: 800; margin-left: .35rem; }
+
+/* ═══════════════════════════════════════════════════════
+   ALERTES OFFRES
+   ═══════════════════════════════════════════════════════ */
+.alerte-card { padding: 1.25rem; border-radius: 16px; background: var(--surface); border: 1px solid var(--bord); margin-bottom: .75rem; transition: all .2s ease; }
+.alerte-card.inactive { opacity: .6; }
+.alerte-card-header { display: flex; justify-content: space-between; align-items: center; gap: 1rem; margin-bottom: .75rem; }
+.alerte-card-title { font-weight: 700; font-size: 1rem; }
+.alerte-card-meta { display: flex; flex-wrap: wrap; gap: .5rem; margin-bottom: .75rem; }
+.alerte-card-actions { display: flex; gap: .5rem; flex-wrap: wrap; }
+.alerte-switch { display: inline-flex; align-items: center; gap: .5rem; cursor: pointer; }
+.alerte-switch input { display: none; }
+.alerte-switch-track { width: 42px; height: 22px; border-radius: 999px; background: var(--surface-2); border: 1px solid var(--bord); position: relative; transition: all .2s ease; }
+.alerte-switch-track::after { content: ""; position: absolute; top: 2px; left: 2px; width: 16px; height: 16px; border-radius: 50%; background: var(--texte-muet); transition: all .2s ease; }
+.alerte-switch input:checked + .alerte-switch-track { background: linear-gradient(110deg, var(--fusion-cyan), var(--fusion-violet)); border-color: transparent; }
+.alerte-switch input:checked + .alerte-switch-track::after { left: 22px; background: #fff; }
+.alerte-form { padding: 1.5rem; border-radius: 18px; background: var(--surface); border: 1px solid var(--bord); display: flex; flex-direction: column; gap: .85rem; }
+.alerte-form label { font-size: .85rem; font-weight: 650; }
+.alerte-form input, .alerte-form select { width: 100%; padding: .65rem .85rem; border-radius: 10px; border: 1px solid var(--bord); background: var(--surface-2); color: var(--texte); font-family: inherit; font-size: .9rem; margin-top: .35rem; }
+.alerte-empty { padding: 3rem 1.5rem; text-align: center; color: var(--texte-muet); }
+.alerte-empty-icon { font-size: 3rem; margin-bottom: 1rem; opacity: .4; }

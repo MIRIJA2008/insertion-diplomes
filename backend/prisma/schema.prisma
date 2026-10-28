@@ -70,6 +70,7 @@ model Utilisateur {
   organisme          Organisme?
   candidatures       Candidature[]
   historiqueCandidatures CandidatureHistorique[] @relation("HistoriqueAuteur")
+  alertesOffres      AlerteOffre[]
   favoris            Favori[]
   messages           Message[]
   messagesCommunaute MessageCommunaute[]
@@ -267,6 +268,7 @@ model Filiere {
   profils     ProfilCandidat[]
   offres      Offre[]
   communautes Communaute[]
+  alertesOffres AlerteOffre[]
 
   @@map("filieres")
 }
@@ -334,4 +336,20 @@ model Reponse {
   soumiseLe           DateTime     @default(now())
 
   @@map("reponses")
+}
+
+model AlerteOffre {
+  id           Int         @id @default(autoincrement())
+  utilisateurId Int
+  utilisateur  Utilisateur @relation(fields: [utilisateurId], references: [id], onDelete: Cascade)
+  nom          String
+  filiereId    Int?
+  filiere      Filiere?    @relation(fields: [filiereId], references: [id], onDelete: SetNull)
+  typeContrat  TypeContrat?
+  ville        String?
+  motsCles     String?
+  active       Boolean     @default(true)
+  creeLe       DateTime    @default(now())
+
+  @@map("alertes_offres")
 }
