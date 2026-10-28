@@ -75,6 +75,21 @@ messagerieRoutes.post("/conversations/:id/messages", async (req, res, next) => {
       data: { conversationId, auteurId: req.user!.id, contenu },
       include: { auteur: { select: { id: true, nom: true } } },
     });
+    // Notifier les autres membres de la conversation (fire & forget)
+    prisma.conversationMembre.findMany({
+      where: { conversationId: Number(req.params.id), NOT: { utilisateurId: req.user!.id } },
+      select: { utilisateurId: true },
+    }).then((membres) => {
+      if (membres.length > 0) {
+        prisma.notification.createMany({
+          data: membres.map((m) => ({
+            utilisateurId: m.utilisateurId,
+            titre: "Nouveau message",
+            contenu: "Vous avez recu un nouveau message.",
+          })),
+        }).catch(() => {});
+      }
+    }).catch(() => {});
     const autres = await prisma.conversationMembre.findMany({
       where: { conversationId, utilisateurId: { not: req.user!.id } },
     });

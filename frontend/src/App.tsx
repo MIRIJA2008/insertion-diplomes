@@ -23,6 +23,7 @@ import RecruteurPipeline from "./pages/recruteur/Pipeline";
 import RecruteurRecu from "./pages/recruteur/Recu";
 import RecruteurOrganisme from "./pages/recruteur/Organisme";
 import RecruteurCandidatDetail from "./pages/recruteur/CandidatDetail";
+import NotificationsPage from "./pages/Notifications";
 import Communautes from "./pages/Communautes";
 import Messagerie from "./pages/Messagerie";
 
@@ -79,6 +80,7 @@ export default function App() {
 
         <Route path="/communautes" element={<Communautes />} />
         <Route path="/messages" element={<Messagerie />} />
+        <Route path="/notifications" element={<NotificationsPage />} />
       </Route>
 
       <Route path="*" element={<AccueilSelonRole />} />
