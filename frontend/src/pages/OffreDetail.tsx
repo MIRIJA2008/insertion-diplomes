@@ -5,6 +5,7 @@ import { useAuth } from "../auth";
 import { useI18n } from "../i18n";
 import PublicNav from "../components/PublicNav";
 import PageHeader from "../components/PageHeader";
+import BackButton from "../components/BackButton";
 
 export default function OffreDetail() {
   const { id } = useParams();
@@ -68,7 +69,8 @@ export default function OffreDetail() {
     <div className="pf-page">
       <PublicNav />
       <div className="pf-container">
-        <PageHeader
+        <BackButton />
+          <PageHeader
           title="Detail de l'offre"
           subtitle={`Publiee par ${offre.organisme.nom}`}
           backTo="/offres"
@@ -98,7 +100,32 @@ export default function OffreDetail() {
           </div>
 
           <div className="pf-detail-body">
-            <h2>Description</h2>
+            {(offre as any).match && (offre as any).match.raisons && (offre as any).match.raisons.length > 0 && (
+              <div className="pf-detail-body" style={{ marginTop: "1.5rem", background: "linear-gradient(135deg, rgba(6,182,212,.08), rgba(139,92,246,.08))", border: "1px solid color-mix(in srgb, var(--fusion-cyan) 35%, transparent)" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem" }}>
+                  <h2 style={{ margin: 0 }}>Pourquoi cette offre vous correspond</h2>
+                  <span style={{ fontSize: "2rem", fontWeight: 800, background: "linear-gradient(110deg, var(--fusion-cyan), var(--fusion-violet))", WebkitBackgroundClip: "text", backgroundClip: "text", color: "transparent" }}>
+                    {(offre as any).match.score}%
+                  </span>
+                </div>
+                <ul style={{ margin: 0, paddingLeft: "1.25rem", lineHeight: 1.8 }}>
+                  {(offre as any).match.raisons.map((r: string, i: number) => (
+                    <li key={i}>{r}</li>
+                  ))}
+                </ul>
+                {(offre as any).match.manques && (offre as any).match.manques.length > 0 && (
+                  <div style={{ marginTop: "1rem", paddingTop: "1rem", borderTop: "1px solid var(--bord)" }}>
+                    <p style={{ margin: "0 0 .5rem", fontWeight: 700, color: "var(--texte-muet)" }}>A ameliorer pour ce poste :</p>
+                    <div style={{ display: "flex", flexWrap: "wrap", gap: ".4rem" }}>
+                      {(offre as any).match.manques.map((m: string, i: number) => (
+                        <span key={i} className="pf-chip" style={{ background: "color-mix(in srgb, #fbbf24 15%, transparent)", border: "1px solid color-mix(in srgb, #fbbf24 45%, transparent)", color: "#fbbf24" }}>{m}</span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+<h2>Description</h2>
             <p style={{ whiteSpace: "pre-line" }}>{offre.description}</p>
 
             {offre.niveauRequis && (<><h2>{t("offer.level")}</h2><p>{offre.niveauRequis}</p></>)}

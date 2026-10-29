@@ -4,6 +4,7 @@ import { useAuth } from "../../auth";
 import { useI18n } from "../../i18n";
 import { api, type Notification } from "../../api";
 import ThemeToggle from "../../components/ThemeToggle";
+import BackButton from "../../components/BackButton";
 import LanguageSelector from "../../components/LanguageSelector";
 
 function Contenu() {
@@ -13,7 +14,7 @@ function Contenu() {
   const [ouvert, setOuvert] = useState(false);
 
   useEffect(() => {
-    api<Notification[]>("/notifications").then(setNotifs).catch(() => {});
+    api<{ notifications: Notification[]; total: number }>("/notifications").then((r) => setNotifs(r.notifications)).catch(() => setNotifs([]));
   }, []);
 
   if (!user) return <Navigate to="/login" replace />;
@@ -53,6 +54,7 @@ function Contenu() {
             <NavLink to="/candidat/alertes">Alertes</NavLink>
             <NavLink to="/communautes">{t("nav.communities")}</NavLink>
             <NavLink to="/messages">{t("nav.messages")}</NavLink>
+            <NavLink to="/notifications">Notifications</NavLink>
             <NavLink to="/candidat/parametres">{t("nav.settings")}</NavLink>
           </>
         )}
@@ -66,6 +68,7 @@ function Contenu() {
             <NavLink to="/recruteur/pipeline">Pipeline</NavLink>
             <NavLink to="/communautes">{t("nav.communities")}</NavLink>
             <NavLink to="/messages">{t("nav.messages")}</NavLink>
+            <NavLink to="/notifications">Notifications</NavLink>
           </>
         )}
 
@@ -104,6 +107,7 @@ function Contenu() {
           <ThemeToggle />
         </div>
         <main className="page">
+        <BackButton />
           <Outlet />
         </main>
       </div>

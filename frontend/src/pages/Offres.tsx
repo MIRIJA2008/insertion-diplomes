@@ -4,6 +4,7 @@ import { api, type Offre } from "../api";
 import { useI18n } from "../i18n";
 import PublicNav from "../components/PublicNav";
 import PageHeader from "../components/PageHeader";
+import BackButton from "../components/BackButton";
 
 interface Filiere { id: number; code: string; intitule: string }
 
@@ -55,7 +56,8 @@ export default function Offres() {
     <div className="pf-page">
       <PublicNav />
       <div className="pf-container">
-        <PageHeader
+        <BackButton />
+          <PageHeader
           title={t("nav.offers")}
           subtitle="Trouvez l'opportunite qui correspond a votre parcours"
           backTo="/"
@@ -116,6 +118,11 @@ export default function Offres() {
               {offres.map((o) => (
                 <Link key={o.id} to={`/offres/${o.id}`} className="pf-offre-card">
                   <div className="pf-offre-meta">
+                  {(o as any).match && (
+                    <span className="pf-chip" style={{ background: "linear-gradient(110deg, var(--fusion-cyan), var(--fusion-violet))", color: "#fff", border: 0 }}>
+                      {(o as any).match.score}% match
+                    </span>
+                  )}
                     {o.typeContrat && <span className="pf-chip pf-chip-violet">{TYPE_LABEL[o.typeContrat] ?? o.typeContrat}</span>}
                     {o.filiere && <span className="pf-chip pf-chip-cyan">{o.filiere.code}</span>}
                     <span className="pf-chip">{o.statut === "CLOTUREE" ? "Cloturee" : "Ouverte"}</span>

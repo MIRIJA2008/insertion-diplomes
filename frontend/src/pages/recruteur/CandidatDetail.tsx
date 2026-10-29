@@ -1,13 +1,12 @@
 import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
-import { useAuth } from "../../auth";
+import { api } from "../../api";
 
-interface Filiere { id: number; code: string; intitule: string }
 interface ProfilDetail {
-  utilisateur: { id: number; nom: string; email: string; creeLe: string };
+  utilisateur: { id: number; nom: string; email: string };
   profil: {
     niveauEtudes: string | null;
-    filiere: Filiere | null;
+    filiere: { code: string; intitule: string } | null;
     etablissement: string | null;
     diplomes: string[];
     competences: string[];
@@ -15,7 +14,6 @@ interface ProfilDetail {
     aCv: boolean;
     cvNom: string | null;
     aPhoto: boolean;
-    majLe: string;
   };
 }
 
@@ -25,43 +23,23 @@ function initiales(nom: string) {
 
 export default function RecruteurCandidatDetail() {
   const { id } = useParams();
-  const { token } = useAuth() as any;
   const [data, setData] = useState<ProfilDetail | null>(null);
   const [erreur, setErreur] = useState("");
 
   useEffect(() => {
-    (async () => {
-      try {
-        const base = (window as any).__API_BASE__ ?? "";
-        const t = localStorage.getItem("insertion.session");
-        const tok = t ? JSON.parse(t).token : "";
-        const res = await fetch(`/api/profils/${id}`, {
-          headers: { Authorization: `Bearer ${tok}` },
-        });
-        if (!res.ok) throw new Error(`Erreur ${res.status}`);
-        setData(await res.json());
-      } catch (e) {
-        setErreur(e instanceof Error ? e.message : "Erreur");
-      }
-    })();
+    // Utilisation de api() qui gère automatiquement le token
+    api<ProfilDetail>(`/profils/${id}`)
+      .then(setData)
+      .catch((e) => setErreur(e.message));
   }, [id]);
 
-  const tokenFromStorage = () => {
-    const t = localStorage.getItem("insertion.session");
-    return t ? JSON.parse(t).token : "";
-  };
+  if (erreur) return (
+    <div>
+      <Link to="/recruteur/candidatures" className="pf-back"><span className="pf-back-icon">&larr;</span> Retour</Link>
+      <div className="pf-alert pf-alert-error">{erreur}</div>
+    </div>
+  );
 
-  const urlPhoto = `/api/profils/${id}/photo?token=${encodeURIComponent(tokenFromStorage())}`;
-  const urlCv = `/api/profils/${id}/cv?token=${encodeURIComponent(tokenFromStorage())}`;
-
-  if (erreur) {
-    return (
-      <div>
-        <Link to="/recruteur/candidatures" className="pf-back"><span className="pf-back-icon">&larr;</span> Retour aux candidatures</Link>
-        <div className="pf-alert pf-alert-error">{erreur}</div>
-      </div>
-    );
-  }
   if (!data) return <p className="muted">Chargement...</p>;
 
   const { utilisateur, profil } = data;
@@ -71,16 +49,9 @@ export default function RecruteurCandidatDetail() {
       <Link to="/recruteur/candidatures" className="pf-back"><span className="pf-back-icon">&larr;</span> Retour aux candidatures</Link>
 
       <div className="rec-hero" style={{ display: "flex", gap: "1.5rem", alignItems: "center", flexWrap: "wrap" }}>
-        {profil.aPhoto ? (
-          <img
-            src={urlPhoto}
-            alt={utilisateur.nom}
-            style={{ width: 96, height: 96, borderRadius: 24, objectFit: "cover", border: "1px solid var(--bord)" }}
-            onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }}
-          />
-        ) : (
-          <div className="rec-avatar rec-avatar-lg">{initiales(utilisateur.nom)}</div>
-        )}
+        <div className="rec-avatar rec-avatar-lg">
+          {initiales(utilisateur.nom)}
+        </div>
         <div style={{ flex: 1, minWidth: 220 }}>
           <h1 style={{ margin: 0 }}>{utilisateur.nom}</h1>
           <p style={{ margin: ".35rem 0" }}>
@@ -90,9 +61,9 @@ export default function RecruteurCandidatDetail() {
           <p style={{ margin: 0, color: "var(--texte-muet)" }}>{utilisateur.email}</p>
         </div>
         {profil.aCv && (
-          <a href={urlCv} target="_blank" rel="noopener noreferrer" className="pf-btn pf-btn-primary">
+          <button className="pf-btn pf-btn-primary" onClick={() => alert("Le telechargement du CV necessite la route /cv (a faire si besoin)")}>
             Telecharger le CV
-          </a>
+          </button>
         )}
       </div>
 

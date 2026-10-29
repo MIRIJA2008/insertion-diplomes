@@ -190,3 +190,76 @@ candidaturesRoutes.get("/recruteur/pipeline", authenticate, requireRole("RECRUTE
     res.json({ ...grouped, stats });
   } catch (e) { next(e); }
 });
+// ============================================================
+// DETAIL ET HISTORIQUE (Chantier 1)
+// ============================================================
+candidaturesRoutes.get("/candidatures/:id", authenticate, async (req, res, next) => {
+  try {
+    const id = Number(req.params.id);
+    const cand = await prisma.candidature.findUnique({
+      where: { id },
+      include: {
+        offre: { include: { organisme: true, filiere: true } },
+        candidat: {
+          select: {
+            id: true, nom: true, email: true,
+            profilCandidat: { include: { filiere: true } },
+          },
+        },
+        historique: {
+          orderBy: { creeLe: "desc" },
+          include: { auteur: { select: { id: true, nom: true } } },
+        },
+      },
+    });
+    if (!cand) return next(new HttpError(404, "Candidature introuvable"));
+
+    const isOwner = cand.candidatId === req.user!.id;
+    const isRecruiter = cand.offre.organisme.utilisateurId === req.user!.id;
+    const isAdmin = req.user!.role === "ADMIN";
+
+    if (!isOwner && !isRecruiter && !isAdmin) {
+      return next(new HttpError(403, "Acces refuse"));
+    }
+    res.json(cand);
+  } catch (e) { next(e); }
+});
+
+candidaturesRoutes.get("/candidatures/:id/historique", authenticate, async (req, res, next) => {
+  try {
+    const id = Number(req.params.id);
+    const cand = await prisma.candidature.findUnique({
+      where: { id },
+      include: { offre: { include: { organisme: true } } },
+    });
+    if (!cand) return next(new HttpError(404, "Candidature introuvable"));
+
+    const isOwner = cand.candidatId === req.user!.id;
+    const isRecruiter = cand.offre.organisme.utilisateurId === req.user!.id;
+    const isAdmin = req.user!.role === "ADMIN";
+
+    if (!isOwner && !isRecruiter && !isAdmin) {
+      return next(new HttpError(403, "Acces refuse"));
+    }
+
+    const historique = await prisma.candidatureHistorique.findMany({
+      where: { candidatureId: id },
+      orderBy: { creeLe: "desc" },
+      include: { auteur: { select: { id: true, nom: true } } },
+    });
+    res.json(historique);
+  } catch (e) { next(e); }
+});
+
+candidaturesRoutes.delete("/mes-candidatures/:id", authenticate, async (req, res, next) => {
+  try {
+    const id = Number(req.params.id);
+    const cand = await prisma.candidature.findUnique({ where: { id } });
+    if (!cand) return next(new HttpError(404, "Candidature introuvable"));
+    if (cand.candidatId !== req.user!.id) {
+      return next(new HttpError(403, "Vous ne pouvez retirer que vos propres candidatures"));
+    }
+    await prisma.candidature.delete({ where: { id } });
+    res.json({ ok: true });
+  } catch (e) { next(e); }
+});

@@ -1,4 +1,5 @@
 import { Router } from "express";
+import { calculerMatching, getProfilCandidat } from "../matching/matching.service";
 import { z } from "zod";
 import { prisma } from "../../config/prisma";
 import { authenticate, requireRole } from "../../middlewares/authenticate";
@@ -66,32 +67,25 @@ offresRoutes.get("/", async (req, res, next) => {
 // Recommandations selon le profil du candidat connecte
 offresRoutes.get("/recommandees", authenticate, async (req, res, next) => {
   try {
-    const profil = await prisma.profilCandidat.findUnique({ where: { utilisateurId: req.user!.id } });
     const offres = await prisma.offre.findMany({
       where: { dateLimite: { gte: new Date() } },
-      include: offreInclude,
+      include: { organisme: true, filiere: true },
       orderBy: { creeLe: "desc" },
       take: 50,
     });
-    const competences = (profil?.competences ?? []).map((c) => c.toLowerCase());
-    const filiereId = profil?.filiereId;
-    const niveau = profil?.niveauEtudes?.toLowerCase() ?? "";
-    const note = (o: any) => {
-      let score = 0;
-      if (niveau && o.niveauRequis && o.niveauRequis.toLowerCase().includes(niveau)) score += 3;
-      if (filiereId && o.filiereId === filiereId) score += 4;
-      const recherchees = (o.competencesRecherchees ?? []).map((c: string) => c.toLowerCase());
-      score += competences.filter((c) => recherchees.some((r: string) => r.includes(c) || c.includes(r))).length * 2;
-      return score;
-    };
-    const resultat = offres
-      .map((o) => ({ ...avecStatut(o), score: note(o) }))
-      .filter((o) => o.score > 0)
-      .sort((a, b) => b.score - a.score);
-    res.json(resultat);
-  } catch (e) {
-    next(e);
-  }
+    const profil = await getProfilCandidat(req.user!.id);
+    const enrichies = offres.map((o) => {
+      const match = calculerMatching(profil, {
+        filiereId: o.filiereId,
+        niveauRequis: o.niveauRequis,
+        competencesRecherchees: o.competencesRecherchees,
+        lieu: o.lieu,
+      });
+      return { ...o, match };
+    });
+    enrichies.sort((a, b) => b.match.score - a.match.score);
+    res.json(enrichies);
+  } catch (e) { next(e); }
 });
 
 // Mes offres (recruteur) - declare AVANT /:id
@@ -113,12 +107,37 @@ offresRoutes.get("/recruteur/mes-offres", authenticate, requireRole("RECRUTEUR",
 // Detail public
 offresRoutes.get("/:id", async (req, res, next) => {
   try {
-    const offre = await prisma.offre.findUnique({ where: { id: Number(req.params.id) }, include: offreInclude });
-    if (!offre) throw new HttpError(404, "Offre introuvable");
-    res.json(avecStatut(offre));
-  } catch (e) {
-    next(e);
-  }
+    const id = Number(req.params.id);
+    const offre = await prisma.offre.findUnique({
+      where: { id },
+      include: {
+        organisme: true,
+        filiere: true,
+        _count: { select: { candidatures: true } },
+      },
+    });
+    if (!offre) return next(new HttpError(404, "Offre introuvable"));
+
+    // Matching : enrichir si l'utilisateur est connecte et CANDIDAT
+    let match = null;
+    const authHeader = req.headers.authorization;
+    if (authHeader && authHeader.startsWith("Bearer ") && req.user?.role === "CANDIDAT") {
+      const profil = await getProfilCandidat(req.user.id);
+      match = calculerMatching(profil, {
+        filiereId: offre.filiereId,
+        niveauRequis: offre.niveauRequis,
+        competencesRecherchees: offre.competencesRecherchees,
+        lieu: offre.lieu,
+      });
+    }
+
+    res.json({
+      ...offre,
+      statut: offre.dateLimite < new Date() ? "CLOTUREE" : "OUVERTE",
+      nbCandidatures: offre._count.candidatures,
+      match,
+    });
+  } catch (e) { next(e); }
 });
 
 // Creation (recruteur)
@@ -162,4 +181,49 @@ offresRoutes.delete("/:id", authenticate, requireRole("RECRUTEUR", "ADMIN"), asy
   } catch (e) {
     next(e);
   }
+});
+// Recruteur : candidats pertinents pour une offre (matching inverse)
+offresRoutes.get("/:id/candidats-pertinents", authenticate, requireRole("RECRUTEUR", "ADMIN"), async (req, res, next) => {
+  try {
+    const id = Number(req.params.id);
+    const offre = await prisma.offre.findUnique({
+      where: { id },
+      include: { organisme: true, filiere: true },
+    });
+    if (!offre) return next(new HttpError(404, "Offre introuvable"));
+    if (offre.organisme.utilisateurId !== req.user!.id && req.user!.role !== "ADMIN") {
+      return next(new HttpError(403, "Acces refuse"));
+    }
+
+    const candidats = await prisma.utilisateur.findMany({
+      where: { role: "CANDIDAT", profilCandidat: { isNot: null } },
+      select: {
+        id: true, nom: true, email: true,
+        profilCandidat: {
+          select: { filiereId: true, niveauEtudes: true, competences: true },
+        },
+      },
+      take: 200,
+    });
+
+    const enrichis = candidats.map((c) => {
+      const match = calculerMatching(
+        c.profilCandidat ? {
+          filiereId: c.profilCandidat.filiereId,
+          niveauEtudes: c.profilCandidat.niveauEtudes,
+          competences: c.profilCandidat.competences,
+        } : null,
+        {
+          filiereId: offre.filiereId,
+          niveauRequis: offre.niveauRequis,
+          competencesRecherchees: offre.competencesRecherchees,
+          lieu: offre.lieu,
+        }
+      );
+      return { id: c.id, nom: c.nom, email: c.email, match };
+    });
+
+    enrichis.sort((a, b) => b.match.score - a.match.score);
+    res.json(enrichis.slice(0, 50));
+  } catch (e) { next(e); }
 });
