@@ -9,6 +9,13 @@ import Offres from "./pages/Offres";
 import OffreDetail from "./pages/OffreDetail";
 import Enquete from "./pages/Enquete";
 import Dashboard from "./pages/Dashboard";
+import AuditPage from "./pages/Audit";
+import AdminDiplomes from "./pages/AdminDiplomes";
+import AdminDiplomeDetail from "./pages/AdminDiplomeDetail";
+import AdminOrganismes from "./pages/AdminOrganismes";
+import AdminOrganismeDetail from "./pages/AdminOrganismeDetail";
+import AdminStats from "./pages/AdminStats";
+import AdminSuggestions from "./pages/AdminSuggestions";
 import Filieres from "./pages/Filieres";
 import Campagnes from "./pages/Campagnes";
 import CandidatureDetail from "./pages/candidat/CandidatureDetail";
@@ -57,6 +64,13 @@ export default function App() {
       <Route element={<AppLayout />}>
         <Route element={<RequireRole roles={["ADMIN", "CONSULTANT"]} />}>
           <Route path="/tableau-de-bord" element={<Dashboard />} />
+          <Route path="/tableau-de-bord/audit" element={<AuditPage />} />
+          <Route path="/admin/diplomes" element={<AdminDiplomes />} />
+          <Route path="/admin/diplomes/:id" element={<AdminDiplomeDetail />} />
+          <Route path="/admin/organismes" element={<AdminOrganismes />} />
+          <Route path="/admin/organismes/:id" element={<AdminOrganismeDetail />} />
+          <Route path="/admin/stats" element={<AdminStats />} />
+          <Route path="/tableau-de-bord/suggestions" element={<AdminSuggestions />} />
           <Route path="/filieres" element={<Filieres />} />
           <Route path="/campagnes" element={<Campagnes />} />
         </Route>

@@ -93,6 +93,8 @@ model ProfilCandidat {
   diplomes      String[]
   competences   String[]
   experience    String?
+  situationPro  String?   @default("INCONNU")
+  verifie       Boolean   @default(false)
   cvPdf         Bytes?
   cvNom         String?
   photo         Bytes?
@@ -352,4 +354,24 @@ model AlerteOffre {
   creeLe       DateTime    @default(now())
 
   @@map("alertes_offres")
+}
+model Suggestion {
+  id            Int      @id @default(autoincrement())
+  utilisateurId Int
+  categorie     String
+  contenu       String
+  statut        String   @default("NOUVELLE")
+  reponse       String?
+  creeLe        DateTime @default(now())
+
+  @@map("suggestions")
+}
+model ActiviteLog {
+  id            Int      @id @default(autoincrement())
+  utilisateurId Int?
+  action        String
+  details       String?
+  creeLe        DateTime @default(now())
+
+  @@map("activite_logs")
 }

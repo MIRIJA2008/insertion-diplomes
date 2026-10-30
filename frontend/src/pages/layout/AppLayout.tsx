@@ -5,6 +5,7 @@ import { useI18n } from "../../i18n";
 import { api, type Notification } from "../../api";
 import ThemeToggle from "../../components/ThemeToggle";
 import BackButton from "../../components/BackButton";
+import SuggestionButton from "../../components/SuggestionButton";
 import LanguageSelector from "../../components/LanguageSelector";
 
 function Contenu() {
@@ -37,6 +38,11 @@ function Contenu() {
           <>
             <NavLink to="/tableau-de-bord">Tableau de bord</NavLink>
             <NavLink to="/filieres">Filieres</NavLink>
+            <NavLink to="/admin/diplomes">Suivi des diplômés</NavLink>
+            <NavLink to="/admin/organismes">Recruteurs & Organismes</NavLink>
+            <NavLink to="/admin/stats">Rapports & Stats</NavLink>
+            <NavLink to="/tableau-de-bord/audit">Journal d audit</NavLink>
+            <NavLink to="/tableau-de-bord/suggestions">Suggestions</NavLink>
             {user.role === "ADMIN" && <NavLink to="/campagnes">Campagnes</NavLink>}
             <NavLink to="/offres">Offres d'emploi</NavLink>
             <NavLink to="/communautes">Communautes</NavLink>
@@ -46,7 +52,7 @@ function Contenu() {
 
         {user.role === "CANDIDAT" && (
           <>
-            <NavLink to="/candidat">{t("nav.candidateSpace")}</NavLink>
+            <NavLink to="/candidat">{"Espace diplome"}</NavLink>
             <NavLink to="/offres">{t("nav.offers")}</NavLink>
             <NavLink to="/candidat/profil">{t("nav.profile")}</NavLink>
             <NavLink to="/candidat/candidatures">{t("nav.applications")}</NavLink>
@@ -110,6 +116,7 @@ function Contenu() {
         <BackButton />
           <Outlet />
         </main>
+        <SuggestionButton />
       </div>
     </div>
   );

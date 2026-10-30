@@ -12,6 +12,9 @@ export default function Register() {
   const [nom, setNom] = useState("");
   const [email, setEmail] = useState("");
   const [motDePasse, setMotDePasse] = useState("");
+  const [filiereId, setFiliereId] = useState("");
+  const [niveauEtudes, setNiveauEtudes] = useState("");
+  const [etablissement, setEtablissement] = useState("");
   const [orgNom, setOrgNom] = useState("");
   const [orgType, setOrgType] = useState("ENTREPRISE_PRIVEE");
   const [orgVille, setOrgVille] = useState("");
@@ -55,6 +58,29 @@ export default function Register() {
         <p className="muted">{t("auth.registerSubtitle")}</p>
 
         <form onSubmit={soumettre} style={{ display: "flex", flexDirection: "column", gap: ".25rem" }}>
+
+              {/* CHAMPS DIPLOME AJOUTES AUTOMATIQUEMENT */}
+              {role === "CANDIDAT" && (
+                <div style={{ display: "flex", flexDirection: "column", gap: ".85rem", marginTop: "1rem", padding: "1rem", background: "var(--surface-2)", borderRadius: "12px", border: "1px solid var(--bord)" }}>
+                  <h3 style={{ margin: 0, fontSize: "1rem" }}>Informations académiques</h3>
+                  
+                  <label>
+                    Établissement
+                    <input value={etablissement} onChange={(e) => setEtablissement(e.target.value)} placeholder="Ex: INSI, Université d'Antananarivo..." required />
+                  </label>
+                  
+                  <label>
+                    Niveau d'études
+                    <input value={niveauEtudes} onChange={(e) => setNiveauEtudes(e.target.value)} placeholder="Ex: Licence 3, Master 1..." required />
+                  </label>
+
+                  <label>
+                    Filière (ID)
+                    <input type="number" value={filiereId} onChange={(e) => setFiliereId(e.target.value)} placeholder="ID de la filière (ex: 1)" required />
+                  </label>
+                </div>
+              )}
+
           <label>{t("auth.accountType")}</label>
           <div className="choice">
             <input type="radio" id="r-cand" checked={role === "CANDIDAT"} onChange={() => setRole("CANDIDAT")} />
