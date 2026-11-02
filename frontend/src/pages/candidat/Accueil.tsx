@@ -1,220 +1,122 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { api, type Candidature, type Offre } from "../../api";
+import { api } from "../../api";
 import { useAuth } from "../../auth";
-import { useI18n } from "../../i18n";
 
-interface ProfilMoi {
-  utilisateur: { id: number; nom: string; email: string };
-  profil: {
-    niveauEtudes: string | null;
-    filiere: any;
-    etablissement: string | null;
-    diplomes: string[];
-    competences: string[];
-    experience: string | null;
-    aCv: boolean;
-    aPhoto: boolean;
-  } | null;
-}
-
-function initiales(nom: string) {
-  return nom.trim().split(/\s+/).map((p) => p[0]?.toUpperCase() ?? "").slice(0, 2).join("") || "?";
-}
-
-function ilYA(date: string) {
-  const d = new Date(date);
-  const jours = Math.floor((Date.now() - d.getTime()) / 86400000);
-  if (jours === 0) return "aujourd hui";
-  if (jours === 1) return "hier";
-  if (jours < 7) return `il y a ${jours} jours`;
-  return d.toLocaleDateString("fr-FR");
-}
-
-const STATUT_LABEL: Record<string, string> = {
-  ENVOYEE: "Envoyee", VUE: "Vue", ACCEPTEE: "Acceptee", REFUSEE: "Refusee",
-};
-
-function badgeClass(statut: string) {
-  const s = statut.toLowerCase();
-  if (s === "acceptee") return "cand-badge cand-badge-acceptee";
-  if (s === "refusee") return "cand-badge cand-badge-refusee";
-  if (s === "vue") return "cand-badge cand-badge-vue";
-  return "cand-badge cand-badge-envoyee";
-}
-
-function calculerCompletion(p: ProfilMoi["profil"]) {
-  if (!p) return 0;
-  const checks = [
-    !!p.niveauEtudes,
-    !!p.filiere,
-    !!p.etablissement,
-    p.diplomes.length > 0,
-    p.competences.length >= 3,
-    !!p.experience,
-    p.aCv,
-    p.aPhoto,
-  ];
-  return Math.round((checks.filter(Boolean).length / checks.length) * 100);
+interface Actualite { id: number; titre: string; contenu: string; type: string; creeLe: string; }
+interface Offre { id: number; titre: string; lieu: string; typeContrat: string | null; organisme: { nom: string }; }
+interface Candidature { id: number; statut: string; dateEnvoi: string; offre: { titre: string; organisme: { nom: string } }; }
+interface DashboardData {
+  profil: any;
+  promotion: { anneeSortie: number; filiere?: any } | null;
+  offresRecommandees: Offre[];
+  candidatures: Candidature[];
+  actualites: Actualite[];
 }
 
 export default function CandidatAccueil() {
   const { user } = useAuth();
-  const { t } = useI18n();
-  const [profil, setProfil] = useState<ProfilMoi | null>(null);
-  const [candidatures, setCandidatures] = useState<Candidature[] | null>(null);
-  const [favoris, setFavoris] = useState<any[] | null>(null);
-  const [recommandees, setRecommandees] = useState<Offre[] | null>(null);
+  const [data, setData] = useState<DashboardData | null>(null);
 
   useEffect(() => {
-    api<ProfilMoi>("/profils/moi").then(setProfil).catch(() => setProfil(null));
-    api<Candidature[]>("/mes-candidatures").then(setCandidatures).catch(() => setCandidatures([]));
-    api<any[]>("/mes-favoris").then(setFavoris).catch(() => setFavoris([]));
-    api<Offre[]>("/offres/recommandees").then(setRecommandees).catch(() => setRecommandees([]));
+    api<DashboardData>("/candidat/dashboard").then(setData).catch(() => {});
   }, []);
 
-  const p = profil?.profil ?? null;
-  const completion = calculerCompletion(p);
-  const nbCand = candidatures?.length ?? 0;
-  const nbReponses = candidatures?.filter((c) => c.statut !== "ENVOYEE").length ?? 0;
-  const nbAcceptees = candidatures?.filter((c) => c.statut === "ACCEPTEE").length ?? 0;
-  const nbFavoris = favoris?.length ?? 0;
-  const dernieres = (candidatures ?? []).slice(0, 4);
-  const topRecommandees = (recommandees ?? []).slice(0, 3);
+  if (!data) return <p className="muted">Chargement de votre espace...</p>;
 
-  const checklist = [
-    { label: "Niveau d etudes", ok: !!p?.niveauEtudes },
-    { label: "Filiere", ok: !!p?.filiere },
-    { label: "Etablissement", ok: !!p?.etablissement },
-    { label: "Au moins 1 diplome", ok: (p?.diplomes?.length ?? 0) > 0 },
-    { label: "3 competences minimum", ok: (p?.competences?.length ?? 0) >= 3 },
-    { label: "Experience", ok: !!p?.experience },
-    { label: "CV uploade", ok: !!p?.aCv },
-    { label: "Photo de profil", ok: !!p?.aPhoto },
-  ];
+  const p = data.profil;
+  const completion = p ? (
+    [p.niveauEtudes, p.etablissement, p.filiereId, p.competences?.length > 0, p.experience, p.cvPdf].filter(Boolean).length / 6 * 100
+  ) : 0;
 
   return (
-    <div>
-      {/* Hero */}
-      <div className="cand-hero">
-        <h1>Bonjour {user?.nom?.split(" ")[0] ?? ""}, votre parcours continue ici</h1>
-        <p>Completez votre profil, suivez vos candidatures et decouvrez les opportunites adaptees a votre formation.</p>
-        <div className="cand-hero-actions">
-          <Link to="/offres" className="pf-btn pf-btn-primary">Explorer les offres</Link>
-          <Link to="/candidat/profil" className="pf-btn">Mon profil</Link>
-          <Link to="/candidat/candidatures" className="pf-btn pf-btn-ghost">Mes candidatures</Link>
-        </div>
-      </div>
-
-      {/* Stats */}
-      <div className="cand-stats">
-        <div className="cand-stat">
-          <div className="cand-stat-label">Candidatures</div>
-          <div className="cand-stat-value">{nbCand}</div>
-          <div className="cand-stat-hint">{nbReponses} reponse{nbReponses > 1 ? "s" : ""}</div>
-        </div>
-        <div className="cand-stat">
-          <div className="cand-stat-label">Acceptees</div>
-          <div className="cand-stat-value">{nbAcceptees}</div>
-          <div className="cand-stat-hint">Felicitations !</div>
-        </div>
-        <div className="cand-stat">
-          <div className="cand-stat-label">Favoris</div>
-          <div className="cand-stat-value">{nbFavoris}</div>
-          <div className="cand-stat-hint">offres sauvegardees</div>
-        </div>
-        <div className="cand-stat">
-          <div className="cand-stat-label">Profil</div>
-          <div className="cand-stat-value">{completion}%</div>
-          <div className="cand-stat-hint">complete</div>
-        </div>
-      </div>
-
-      {/* Completion profil */}
-      {completion < 100 && (
-        <div className="cand-progress-card">
-          <div className="cand-progress-header">
-            <h3>Completez votre profil</h3>
-            <div className="cand-progress-value">{completion}%</div>
+    <div style={{ display: "grid", gridTemplateColumns: "1fr 340px", gap: "2rem", alignItems: "start" }}>
+      {/* COLONNE PRINCIPALE */}
+      <div>
+        {/* HERO */}
+        <div className="cand-hero" style={{ marginBottom: "2rem" }}>
+          <h1>Bonjour {user?.nom?.split(" ")[0]} 👋</h1>
+          <p>Bienvenue dans votre espace diplômé. Suivez vos candidatures et découvrez les opportunités.</p>
+          <div style={{ display: "flex", gap: "1rem", marginTop: "1rem" }}>
+            <Link to="/candidat/profil" className="pf-btn pf-btn-primary">Compléter mon profil ({Math.round(completion)}%)</Link>
+            <Link to="/offres" className="pf-btn pf-btn-ghost">Explorer les offres</Link>
           </div>
-          <div className="cand-progress-bar">
-            <div className="cand-progress-fill" style={{ width: `${completion}%` }} />
+        </div>
+
+        {/* MA PROMOTION */}
+        {data.promotion && (
+          <div className="cand-profil-card" style={{ marginBottom: "2rem", background: "linear-gradient(135deg, rgba(139, 92, 246, 0.1), rgba(6, 182, 212, 0.1))", borderColor: "rgba(139, 92, 246, 0.3)" }}>
+            <h3 style={{ display: "flex", alignItems: "center", gap: ".5rem" }}>🎓 Ma promotion</h3>
+            <p style={{ fontSize: "1.2rem", fontWeight: "bold", margin: ".5rem 0" }}>Promotion {data.promotion.anneeSortie}</p>
+            <p style={{ color: "var(--texte-muet)" }}>{p?.filiere?.intitule} - {p?.etablissement}</p>
           </div>
-          <div className="cand-progress-checklist">
-            {checklist.map((c, i) => (
-              <div key={i} className={`cand-progress-item ${c.ok ? "done" : ""}`}>{c.label}</div>
+        )}
+
+        {/* OFFRES RECOMMANDEES */}
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem" }}>
+          <h2 style={{ margin: 0 }}>Offres pour vous</h2>
+          <Link to="/offres" style={{ color: "var(--fusion-cyan)", fontSize: ".9rem" }}>Tout voir →</Link>
+        </div>
+        {data.offresRecommandees.length === 0 ? (
+          <p className="muted">Aucune offre recommandée pour le moment.</p>
+        ) : (
+          <div style={{ display: "flex", flexDirection: "column", gap: "1rem", marginBottom: "2rem" }}>
+            {data.offresRecommandees.map((o) => (
+              <Link key={o.id} to={`/offres/${o.id}`} className="pf-offre-card" style={{ textDecoration: "none", color: "inherit" }}>
+                <div style={{ display: "flex", justifyContent: "space-between" }}>
+                  <div>
+                    <h3 style={{ margin: "0 0 .5rem" }}>{o.titre}</h3>
+                    <p className="pf-org" style={{ margin: 0 }}>{o.organisme.nom} • {o.lieu}</p>
+                  </div>
+                  {o.typeContrat && <span className="pf-chip pf-chip-violet">{o.typeContrat}</span>}
+                </div>
+              </Link>
             ))}
           </div>
-          <Link to="/candidat/profil" className="pf-btn pf-btn-primary" style={{ marginTop: ".5rem" }}>Completer mon profil</Link>
-        </div>
-      )}
-
-      {/* Offres recommandees */}
-      <div className="cand-section-title">
-        <h2>Offres recommandees pour vous</h2>
-        <Link to="/offres">Tout voir &rarr;</Link>
+        )}
       </div>
-      {recommandees === null && <p className="muted">{t("common.loading")}</p>}
-      {recommandees !== null && topRecommandees.length === 0 && (
-        <div className="pf-empty">
-          <div className="pf-empty-icon">✨</div>
-          <h3>Pas encore de recommandations</h3>
-          <p>Completez votre profil pour recevoir des offres adaptees.</p>
-          <Link to="/candidat/profil" className="pf-btn pf-btn-primary">Completer mon profil</Link>
-        </div>
-      )}
-      {topRecommandees.length > 0 && (
-        <div className="pf-offres-grid">
-          {topRecommandees.map((o) => (
-            <Link key={o.id} to={`/offres/${o.id}`} className="pf-offre-card">
-              <div className="pf-offre-meta">
-                {o.typeContrat && <span className="pf-chip pf-chip-violet">{o.typeContrat}</span>}
-                {o.filiere && <span className="pf-chip pf-chip-cyan">{o.filiere.code}</span>}
-              </div>
-              <h3>{o.titre}</h3>
-              <p className="pf-org">{o.organisme.nom}</p>
-              <p className="pf-desc">{o.description}</p>
-              <div className="pf-offre-footer">
-                <span>{o.lieu}</span>
-                <span className="pf-arrow">Voir &rarr;</span>
-              </div>
-            </Link>
-          ))}
-        </div>
-      )}
 
-      {/* Dernieres candidatures */}
-      <div className="cand-section-title">
-        <h2>Mes dernieres candidatures</h2>
-        <Link to="/candidat/candidatures">Tout voir &rarr;</Link>
-      </div>
-      {candidatures === null && <p className="muted">{t("common.loading")}</p>}
-      {candidatures !== null && candidatures.length === 0 && (
-        <div className="pf-empty">
-          <div className="pf-empty-icon">📝</div>
-          <h3>Aucune candidature pour le moment</h3>
-          <p>Explorez les offres et postulez a celles qui vous correspondent.</p>
-          <Link to="/offres" className="pf-btn pf-btn-primary">Explorer les offres</Link>
-        </div>
-      )}
-      {dernieres.length > 0 && (
-        <div className="cand-list">
-          {dernieres.map((c: any) => (
-            <div key={c.id} className="cand-item">
-              <div className="rec-avatar" style={{ background: "linear-gradient(135deg, var(--fusion-cyan), var(--fusion-violet))" }}>
-                {(c.offre?.titre ?? "?").slice(0, 2).toUpperCase()}
-              </div>
-              <div className="cand-item-body">
-                <div className="cand-item-title">{c.offre?.titre ?? "Offre"}</div>
-                <div className="cand-item-meta">
-                  {c.offre?.organisme?.nom ?? "-"} - {ilYA(c.dateEnvoi)}
+      {/* BARRE LATERALE (DROITE) */}
+      <div style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}>
+        {/* ACTUALITES PROMOTION */}
+        <div className="cand-profil-card">
+          <h3 style={{ marginBottom: "1rem" }}>📢 Actualités</h3>
+          {data.actualites.length === 0 ? (
+            <p className="muted" style={{ fontSize: ".9rem" }}>Aucune actualité pour le moment.</p>
+          ) : (
+            <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
+              {data.actualites.map((a) => (
+                <div key={a.id}>
+                  <div style={{ fontWeight: "bold", fontSize: ".95rem" }}>{a.titre}</div>
+                  <div style={{ fontSize: ".85rem", color: "var(--texte-muet)", marginTop: ".25rem" }}>{a.contenu}</div>
+                  <div style={{ fontSize: ".75rem", color: "var(--texte-muet)", marginTop: ".35rem" }}>{new Date(a.creeLe).toLocaleDateString("fr-FR")}</div>
                 </div>
-              </div>
-              <span className={badgeClass(c.statut)}>{STATUT_LABEL[c.statut] ?? c.statut}</span>
+              ))}
             </div>
-          ))}
+          )}
         </div>
-      )}
+
+        {/* MES CANDIDATURES */}
+        <div className="cand-profil-card">
+          <h3 style={{ marginBottom: "1rem" }}>📋 Mes candidatures</h3>
+          {data.candidatures.length === 0 ? (
+            <p className="muted" style={{ fontSize: ".9rem" }}>Vous n avez pas encore postulé.</p>
+          ) : (
+            <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
+              {data.candidatures.map((c) => (
+                <div key={c.id}>
+                  <div style={{ fontWeight: "bold", fontSize: ".95rem" }}>{c.offre.titre}</div>
+                  <div style={{ fontSize: ".85rem", color: "var(--texte-muet)" }}>{c.offre.organisme.nom}</div>
+                  <div style={{ marginTop: ".35rem" }}>
+                    <span className={`cand-badge ${c.statut === "ACCEPTEE" ? "cand-badge-acceptee" : c.statut === "REFUSEE" ? "cand-badge-refusee" : "cand-badge-envoyee"}`}>{c.statut}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+          <Link to="/candidat/candidatures" className="pf-btn pf-btn-ghost" style={{ width: "100%", marginTop: "1rem", fontSize: ".85rem" }}>Tout voir</Link>
+        </div>
+      </div>
     </div>
   );
 }

@@ -20,6 +20,7 @@ import { communautesRoutes } from "./modules/communautes/communautes.routes";
 import { messagerieRoutes } from "./modules/messagerie/messagerie.routes";
 import { alertesRoutes } from "./modules/alertes/alertes.routes";
 import { adminRoutes } from "./modules/admin/admin.routes";
+import { candidatRoutes } from "./modules/candidat/candidat.routes";
 import { suggestionsRoutes } from "./modules/suggestions/suggestions.routes";
 import { errorHandler } from "./middlewares/errorHandler";
 
@@ -64,6 +65,7 @@ app.use("/api/communautes", communautesRoutes);
 app.use("/api/messagerie", messagerieRoutes);
 app.use("/api/alertes", alertesRoutes);
 app.use("/api/admin", adminRoutes);
+app.use("/api/candidat", candidatRoutes);
 app.use("/api/suggestions", suggestionsRoutes);
 
 app.use((_req, res) => {

@@ -282,6 +282,7 @@ model Promotion {
   anneeSortie Int
   effectif    Int?
   diplomes    Diplome[]
+  actualites  ActualitePromotion[]
 
   @@unique([filiereId, anneeSortie])
   @@map("promotions")
@@ -374,4 +375,27 @@ model ActiviteLog {
   creeLe        DateTime @default(now())
 
   @@map("activite_logs")
+}
+model ActualitePromotion {
+  id          Int      @id @default(autoincrement())
+  promotionId Int
+  promotion   Promotion @relation(fields: [promotionId], references: [id], onDelete: Cascade)
+  titre       String
+  contenu     String
+  type        String   @default("INFO") // INFO, EVENEMENT, FORMATION
+  creeLe      DateTime @default(now())
+
+  @@map("actualites_promotions")
+}
+model AlerteAdmin {
+  id            Int      @id @default(autoincrement())
+  diplomeId     Int
+  type          String   // PROFIL_INCOMPLET, SITUATION_INCONNUE, etc.
+  priorite      String   @default("MOYENNE") // HAUTE, MOYENNE, BASSE
+  statut        String   @default("NOUVELLE") // NOUVELLE, EN_COURS, RESOLUE
+  commentaire   String?
+  creeLe        DateTime @default(now())
+  majLe         DateTime @updatedAt
+
+  @@map("alertes_admin")
 }

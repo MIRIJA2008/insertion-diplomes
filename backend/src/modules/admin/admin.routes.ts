@@ -196,3 +196,115 @@ adminRoutes.get("/stats-insertion", async (req, res, next) => {
     });
   } catch (e) { next(e); }
 });
+// Export CSV : Liste des diplômés
+adminRoutes.get("/export/diplomes", async (req, res, next) => {
+  try {
+    const diplomes = await prisma.utilisateur.findMany({
+      where: { role: "CANDIDAT" },
+      include: { profilCandidat: { include: { filiere: true } } },
+    });
+
+    let csv = "Nom,Email,Inscrit le,Filiere,Niveau,Situation,Verifie\n";
+    for (const d of diplomes) {
+      const date = new Date(d.creeLe).toLocaleDateString("fr-FR");
+      const filiere = d.profilCandidat?.filiere?.intitule || "";
+      const niveau = d.profilCandidat?.niveauEtudes || "";
+      const situation = d.profilCandidat?.situationPro || "INCONNU";
+      const verifie = d.profilCandidat?.verifie ? "Oui" : "Non";
+      csv += `"${d.nom}","${d.email}","${date}","${filiere}","${niveau}","${situation}","${verifie}"\n`;
+    }
+
+    res.setHeader("Content-Type", "text/csv");
+    res.setHeader("Content-Disposition", "attachment; filename=diplomes.csv");
+    res.send(csv);
+  } catch (e) { next(e); }
+});
+
+// Export CSV : Statistiques d'insertion
+adminRoutes.get("/export/stats", async (req, res, next) => {
+  try {
+    const situations = await prisma.profilCandidat.groupBy({
+      by: ["situationPro"],
+      _count: true,
+    });
+
+    let csv = "Situation Professionnelle,Nombre de diplomes\n";
+    for (const s of situations) {
+      csv += `"${s.situationPro || "INCONNU"}",${s._count}\n`;
+    }
+
+    const filieres = await prisma.filiere.findMany({
+      include: { _count: { select: { profils: true } } },
+    });
+    csv += "\nFiliere,Nombre de diplomes\n";
+    for (const f of filieres) {
+      csv += `"${f.intitule}",${f._count.profils}\n`;
+    }
+
+    res.setHeader("Content-Type", "text/csv");
+    res.setHeader("Content-Disposition", "attachment; filename=statistiques.csv");
+    res.send(csv);
+  } catch (e) { next(e); }
+});
+// Lister les alertes
+adminRoutes.get("/alertes", async (req, res, next) => {
+  try {
+    const alertes = await prisma.alerteAdmin.findMany({
+      orderBy: [{ statut: "asc" }, { priorite: "desc" }, { creeLe: "desc" }],
+    });
+    res.json(alertes);
+  } catch (e) { next(e); }
+});
+
+// Générer des alertes automatiquement (scan de la base)
+adminRoutes.post("/alertes/generer", async (req, res, next) => {
+  try {
+    let count = 0;
+    const diplomes = await prisma.utilisateur.findMany({
+      where: { role: "CANDIDAT" },
+      include: { profilCandidat: true },
+    });
+
+    for (const d of diplomes) {
+      // 1. Alerte : Profil incomplet
+      if (!d.profilCandidat?.cvPdf || !d.profilCandidat?.etablissement) {
+        const existe = await prisma.alerteAdmin.findFirst({
+          where: { diplomeId: d.id, type: "PROFIL_INCOMPLET", statut: { not: "RESOLUE" } },
+        });
+        if (!existe) {
+          await prisma.alerteAdmin.create({
+            data: { diplomeId: d.id, type: "PROFIL_INCOMPLET", priorite: "MOYENNE" },
+          });
+          count++;
+        }
+      }
+
+      // 2. Alerte : Situation inconnue
+      if (d.profilCandidat?.situationPro === "INCONNU") {
+        const existe = await prisma.alerteAdmin.findFirst({
+          where: { diplomeId: d.id, type: "SITUATION_INCONNUE", statut: { not: "RESOLUE" } },
+        });
+        if (!existe) {
+          await prisma.alerteAdmin.create({
+            data: { diplomeId: d.id, type: "SITUATION_INCONNUE", priorite: "HAUTE" },
+          });
+          count++;
+        }
+      }
+    }
+
+    res.json({ ok: true, count });
+  } catch (e) { next(e); }
+});
+
+// Changer le statut d'une alerte
+adminRoutes.patch("/alertes/:id", async (req, res, next) => {
+  try {
+    const { statut, commentaire } = req.body;
+    const alerte = await prisma.alerteAdmin.update({
+      where: { id: Number(req.params.id) },
+      data: { statut, commentaire },
+    });
+    res.json(alerte);
+  } catch (e) { next(e); }
+});

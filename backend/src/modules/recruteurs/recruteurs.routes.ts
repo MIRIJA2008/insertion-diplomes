@@ -38,3 +38,58 @@ recruteursRoutes.put("/moi/organisme", async (req, res, next) => {
     next(e);
   }
 });
+// Recherche de diplômés par les recruteurs
+recruteursRoutes.get("/decouvrir", async (req, res, next) => {
+  try {
+    const { q, filiereId, niveau } = req.query;
+    const where: any = { role: "CANDIDAT", profilCandidat: { isNot: null } };
+    
+    if (q) {
+      where.OR = [
+        { nom: { contains: String(q), mode: "insensitive" } },
+        { profilCandidat: { competences: { has: String(q) } } },
+      ];
+    }
+    if (filiereId) {
+      where.profilCandidat = { ...where.profilCandidat, filiereId: Number(filiereId) };
+    }
+    if (niveau) {
+      where.profilCandidat = { ...where.profilCandidat, niveauEtudes: { contains: String(niveau), mode: "insensitive" } };
+    }
+
+    const diplomes = await prisma.utilisateur.findMany({
+      where,
+      select: {
+        id: true, nom: true, email: true, creeLe: true,
+        profilCandidat: {
+          include: { filiere: true }
+        }
+      },
+      take: 50,
+      orderBy: { creeLe: "desc" }
+    });
+    res.json(diplomes);
+  } catch (e) { next(e); }
+});
+
+// Inviter un diplômé à postuler (envoi de notification)
+recruteursRoutes.post("/inviter", async (req, res, next) => {
+  try {
+    const { diplomeId, message } = req.body;
+    const recruteurId = req.user!.id;
+
+    const organisme = await prisma.organisme.findUnique({ where: { utilisateurId: recruteurId } });
+    if (!organisme) return res.status(403).json({ error: "Vous devez avoir un organisme." });
+
+    // Créer la notification
+    await prisma.notification.create({
+      data: {
+        utilisateurId: diplomeId,
+        titre: "Invitation à postuler",
+        contenu: message || `L'organisme ${organisme.nom} vous invite à consulter ses offres.`,
+      }
+    });
+
+    res.json({ ok: true });
+  } catch (e) { next(e); }
+});

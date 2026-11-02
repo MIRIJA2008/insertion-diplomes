@@ -41,6 +41,7 @@ function Contenu() {
             <NavLink to="/admin/diplomes">Suivi des diplômés</NavLink>
             <NavLink to="/admin/organismes">Recruteurs & Organismes</NavLink>
             <NavLink to="/admin/stats">Rapports & Stats</NavLink>
+            <NavLink to="/admin/alertes">Alertes & Suivi</NavLink>
             <NavLink to="/tableau-de-bord/audit">Journal d audit</NavLink>
             <NavLink to="/tableau-de-bord/suggestions">Suggestions</NavLink>
             {user.role === "ADMIN" && <NavLink to="/campagnes">Campagnes</NavLink>}
@@ -69,6 +70,7 @@ function Contenu() {
           <>
             <NavLink to="/recruteur">{t("nav.recruiter")}</NavLink>
             <NavLink to="/recruteur/organisme">{t("nav.organization")}</NavLink>
+            <NavLink to="/recruteur/decouvrir">Découvrir les diplômés</NavLink>
             <NavLink to="/recruteur/offres">{t("nav.myOffers")}</NavLink>
             <NavLink to="/recruteur/candidatures">{t("nav.received")}</NavLink>
             <NavLink to="/recruteur/pipeline">Pipeline</NavLink>

@@ -38,6 +38,14 @@ export default function AdminStats() {
       <div className="pf-header"><div className="pf-header-copy"><h1>Rapports & Statistiques</h1><p>Indicateurs dinsertion professionnelle en temps réel.</p></div></div>
 
       {/* TAUX DE VERIFICATION */}
+            <div style={{ display: "flex", gap: "1rem", marginBottom: "2rem" }}>
+        <a href="/api/admin/export/diplomes" download className="pf-btn pf-btn-ghost">
+          📥 Exporter les diplômés (CSV)
+        </a>
+        <a href="/api/admin/export/stats" download className="pf-btn pf-btn-ghost">
+          📊 Exporter les statistiques (CSV)
+        </a>
+      </div>
       <div className="cand-stats" style={{ marginBottom: "2rem" }}>
         <div className="cand-stat">
           <div className="cand-stat-label">Taux de vérification des profils</div>

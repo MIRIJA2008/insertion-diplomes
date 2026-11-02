@@ -15,6 +15,7 @@ import AdminDiplomeDetail from "./pages/AdminDiplomeDetail";
 import AdminOrganismes from "./pages/AdminOrganismes";
 import AdminOrganismeDetail from "./pages/AdminOrganismeDetail";
 import AdminStats from "./pages/AdminStats";
+import AdminAlertes from "./pages/AdminAlertes";
 import AdminSuggestions from "./pages/AdminSuggestions";
 import Filieres from "./pages/Filieres";
 import Campagnes from "./pages/Campagnes";
@@ -31,6 +32,7 @@ import RecruteurPipeline from "./pages/recruteur/Pipeline";
 import RecruteurRecu from "./pages/recruteur/Recu";
 import RecruteurOrganisme from "./pages/recruteur/Organisme";
 import RecruteurCandidatDetail from "./pages/recruteur/CandidatDetail";
+import RecruteurDecouverte from "./pages/recruteur/Decouverte";
 import NotificationsPage from "./pages/Notifications";
 import Communautes from "./pages/Communautes";
 import Messagerie from "./pages/Messagerie";
@@ -70,6 +72,7 @@ export default function App() {
           <Route path="/admin/organismes" element={<AdminOrganismes />} />
           <Route path="/admin/organismes/:id" element={<AdminOrganismeDetail />} />
           <Route path="/admin/stats" element={<AdminStats />} />
+          <Route path="/admin/alertes" element={<AdminAlertes />} />
           <Route path="/tableau-de-bord/suggestions" element={<AdminSuggestions />} />
           <Route path="/filieres" element={<Filieres />} />
           <Route path="/campagnes" element={<Campagnes />} />
@@ -91,6 +94,7 @@ export default function App() {
           <Route path="/recruteur/candidature/:id" element={<CandidatureDetail />} />
           <Route path="/recruteur/organisme" element={<RecruteurOrganisme />} />
           <Route path="/recruteur/candidat/:id" element={<RecruteurCandidatDetail />} />
+          <Route path="/recruteur/decouvrir" element={<RecruteurDecouverte />} />
         </Route>
 
         <Route path="/communautes" element={<Communautes />} />
