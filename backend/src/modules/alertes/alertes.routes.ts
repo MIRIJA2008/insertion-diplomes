@@ -1,11 +1,13 @@
-import { Router } from "express";
+﻿import { Router } from "express";
 import { z } from "zod";
 import { prisma } from "../../config/prisma";
-import { authenticate } from "../../middlewares/authenticate";
+import { authenticate, requireRole } from "../../middlewares/authenticate";
 import { HttpError } from "../../utils/httpError";
 
 export const alertesRoutes = Router();
-alertesRoutes.use(authenticate);
+alertesRoutes.use(authenticate, requireRole("CANDIDAT"));
+
+const idSchema = z.coerce.number().int().positive().max(Number.MAX_SAFE_INTEGER);
 
 alertesRoutes.get("/", async (req, res, next) => {
   try {
@@ -21,12 +23,20 @@ alertesRoutes.get("/", async (req, res, next) => {
 alertesRoutes.post("/", async (req, res, next) => {
   try {
     const data = z.object({
-      nom: z.string().min(2).max(100),
-      filiereId: z.number().optional(),
+      nom: z.string().trim().min(2).max(100),
+      filiereId: z.number().int().positive().max(Number.MAX_SAFE_INTEGER).optional(),
       typeContrat: z.enum(["CDI", "CDD", "STAGE", "INDEPENDANT", "OCCASIONNEL"]).optional(),
-      ville: z.string().max(100).optional(),
-      motsCles: z.string().max(200).optional(),
+      ville: z.string().trim().max(100).optional(),
+      motsCles: z.string().trim().max(200).optional(),
     }).parse(req.body);
+
+    if (data.filiereId !== undefined) {
+      const filiere = await prisma.filiere.findUnique({
+        where: { id: data.filiereId },
+        select: { id: true },
+      });
+      if (!filiere) throw new HttpError(400, "Filière introuvable");
+    }
 
     const alerte = await prisma.alerteOffre.create({
       data: {
@@ -47,7 +57,7 @@ alertesRoutes.patch("/:id", async (req, res, next) => {
   try {
     const data = z.object({ active: z.boolean() }).parse(req.body);
     const exists = await prisma.alerteOffre.findFirst({
-      where: { id: Number(req.params.id), utilisateurId: req.user!.id },
+      where: { id: idSchema.parse(req.params.id), utilisateurId: req.user!.id },
     });
     if (!exists) throw new HttpError(404, "Alerte introuvable");
     const maj = await prisma.alerteOffre.update({
@@ -62,7 +72,7 @@ alertesRoutes.patch("/:id", async (req, res, next) => {
 alertesRoutes.delete("/:id", async (req, res, next) => {
   try {
     const del = await prisma.alerteOffre.deleteMany({
-      where: { id: Number(req.params.id), utilisateurId: req.user!.id },
+      where: { id: idSchema.parse(req.params.id), utilisateurId: req.user!.id },
     });
     res.json({ deleted: del.count });
   } catch (e) { next(e); }

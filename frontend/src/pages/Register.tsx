@@ -30,7 +30,17 @@ export default function Register() {
       await api("/inscription", {
         method: "POST",
         body: {
-          nom, email, motDePasse, role,
+          nom,
+          email: email.trim().toLowerCase(),
+          motDePasse,
+          role,
+          ...(role === "CANDIDAT"
+            ? {
+                filiereId: Number(filiereId),
+                niveauEtudes: niveauEtudes.trim(),
+                etablissement: etablissement.trim(),
+              }
+            : {}),
           ...(role === "RECRUTEUR"
             ? { organisme: { nom: orgNom, type: orgType, ville: orgVille || undefined, description: orgDescription || undefined } }
             : {}),
@@ -66,17 +76,17 @@ export default function Register() {
                   
                   <label>
                     Établissement
-                    <input value={etablissement} onChange={(e) => setEtablissement(e.target.value)} placeholder="Ex: INSI, Université d'Antananarivo..." required />
+                    <input maxLength={150} value={etablissement} onChange={(e) => setEtablissement(e.target.value)} placeholder="Ex: INSI, Université d'Antananarivo..." required />
                   </label>
                   
                   <label>
                     Niveau d'études
-                    <input value={niveauEtudes} onChange={(e) => setNiveauEtudes(e.target.value)} placeholder="Ex: Licence 3, Master 1..." required />
+                    <input maxLength={100} value={niveauEtudes} onChange={(e) => setNiveauEtudes(e.target.value)} placeholder="Ex: Licence 3, Master 1..." required />
                   </label>
 
                   <label>
                     Filière (ID)
-                    <input type="number" value={filiereId} onChange={(e) => setFiliereId(e.target.value)} placeholder="ID de la filière (ex: 1)" required />
+                    <input type="number" min="1" step="1" value={filiereId} onChange={(e) => setFiliereId(e.target.value)} placeholder="ID de la filière (ex: 1)" required />
                   </label>
                 </div>
               )}
@@ -92,13 +102,13 @@ export default function Register() {
           </div>
 
           <label htmlFor="nom">{t("auth.name")}</label>
-          <input id="nom" required value={nom} onChange={(e) => setNom(e.target.value)} />
+          <input id="nom" required maxLength={100} value={nom} onChange={(e) => setNom(e.target.value)} />
 
           <label htmlFor="email">{t("auth.email")}</label>
-          <input id="email" type="email" required value={email} onChange={(e) => setEmail(e.target.value)} />
+          <input id="email" type="email" required maxLength={254} value={email} onChange={(e) => setEmail(e.target.value)} />
 
           <label htmlFor="mdp">{t("auth.password")} (min. 8)</label>
-          <input id="mdp" type="password" minLength={8} required value={motDePasse} onChange={(e) => setMotDePasse(e.target.value)} />
+          <input id="mdp" type="password" minLength={8} maxLength={128} required value={motDePasse} onChange={(e) => setMotDePasse(e.target.value)} />
 
           {role === "RECRUTEUR" && (
             <>

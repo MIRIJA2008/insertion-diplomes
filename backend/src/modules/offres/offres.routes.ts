@@ -1,4 +1,4 @@
-import { Router } from "express";
+import { Router, type RequestHandler } from "express";
 import { calculerMatching, getProfilCandidat } from "../matching/matching.service";
 import { z } from "zod";
 import { prisma } from "../../config/prisma";
@@ -30,7 +30,7 @@ const offreSchema = z.object({
   titre: z.string().min(3),
   description: z.string().min(10),
   niveauRequis: z.string().optional(),
-  filiereId: z.number().int().optional(),
+  filiereId: z.number().int().positive().max(Number.MAX_SAFE_INTEGER).optional(),
   competencesRecherchees: z.array(z.string()).default([]),
   profilRecherche: z.string().optional(),
   lieu: z.string().min(2),
@@ -38,21 +38,51 @@ const offreSchema = z.object({
   dateLimite: z.coerce.date(),
 });
 
+const idSchema = z.coerce.number().int().positive().max(Number.MAX_SAFE_INTEGER);
+
+const offresQuerySchema = z.object({
+  q: z.preprocess(
+    (value) => value === "" ? undefined : value,
+    z.string().trim().max(120).optional()
+  ),
+  ville: z.preprocess(
+    (value) => value === "" ? undefined : value,
+    z.string().trim().max(100).optional()
+  ),
+  typeContrat: z.preprocess(
+    (value) => value === "" ? undefined : value,
+    z.enum(["CDI", "CDD", "STAGE", "INDEPENDANT", "OCCASIONNEL"]).optional()
+  ),
+  filiereId: z.preprocess(
+    (value) => value === "" ? undefined : value,
+    z.coerce.number().int().positive().max(Number.MAX_SAFE_INTEGER).optional()
+  ),
+  organismeId: z.preprocess(
+    (value) => value === "" ? undefined : value,
+    z.coerce.number().int().positive().max(Number.MAX_SAFE_INTEGER).optional()
+  ),
+  toutes: z.enum(["0", "1"]).optional(),
+});
+const authenticateOptional: RequestHandler = (req, res, next) => {
+  if (!req.headers.authorization) return next();
+  return authenticate(req, res, next);
+};
+
 export const offresRoutes = Router();
 
 // Liste publique avec filtres (les offres cloturees sont masquees par defaut)
 offresRoutes.get("/", async (req, res, next) => {
   try {
-    const { q, ville, typeContrat, filiereId, organismeId, toutes } = req.query as Record<string, string>;
+    const { q, ville, typeContrat, filiereId, organismeId, toutes } = offresQuerySchema.parse(req.query);
     const offres = await prisma.offre.findMany({
       where: {
         ...(q
           ? { OR: [{ titre: { contains: q, mode: "insensitive" } }, { description: { contains: q, mode: "insensitive" } }] }
           : {}),
         ...(ville ? { lieu: { contains: ville, mode: "insensitive" } } : {}),
-        ...(typeContrat ? { typeContrat: typeContrat as any } : {}),
-        ...(filiereId ? { filiereId: Number(filiereId) } : {}),
-        ...(organismeId ? { organismeId: Number(organismeId) } : {}),
+        ...(typeContrat !== undefined ? { typeContrat } : {}),
+        ...(filiereId !== undefined ? { filiereId } : {}),
+        ...(organismeId !== undefined ? { organismeId } : {}),
       },
       include: offreInclude,
       orderBy: { creeLe: "desc" },
@@ -69,7 +99,21 @@ offresRoutes.get("/recommandees", authenticate, async (req, res, next) => {
   try {
     const offres = await prisma.offre.findMany({
       where: { dateLimite: { gte: new Date() } },
-      include: { organisme: true, filiere: true },
+      select: {
+        id: true,
+        titre: true,
+        description: true,
+        niveauRequis: true,
+        filiereId: true,
+        competencesRecherchees: true,
+        profilRecherche: true,
+        lieu: true,
+        typeContrat: true,
+        dateLimite: true,
+        creeLe: true,
+        organisme: { select: { id: true, nom: true, type: true, ville: true, verifie: true } },
+        filiere: { select: { id: true, code: true, intitule: true } },
+      },
       orderBy: { creeLe: "desc" },
       take: 50,
     });
@@ -105,14 +149,25 @@ offresRoutes.get("/recruteur/mes-offres", authenticate, requireRole("RECRUTEUR",
 });
 
 // Detail public
-offresRoutes.get("/:id", async (req, res, next) => {
+offresRoutes.get("/:id", authenticateOptional, async (req, res, next) => {
   try {
-    const id = Number(req.params.id);
+    const id = idSchema.parse(req.params.id);
     const offre = await prisma.offre.findUnique({
       where: { id },
-      include: {
-        organisme: true,
-        filiere: true,
+      select: {
+        id: true,
+        titre: true,
+        description: true,
+        niveauRequis: true,
+        filiereId: true,
+        competencesRecherchees: true,
+        profilRecherche: true,
+        lieu: true,
+        typeContrat: true,
+        dateLimite: true,
+        creeLe: true,
+        organisme: { select: { id: true, nom: true, type: true, ville: true, verifie: true } },
+        filiere: { select: { id: true, code: true, intitule: true } },
         _count: { select: { candidatures: true } },
       },
     });
@@ -121,7 +176,7 @@ offresRoutes.get("/:id", async (req, res, next) => {
     // Matching : enrichir si l'utilisateur est connecte et CANDIDAT
     let match = null;
     const authHeader = req.headers.authorization;
-    if (authHeader && authHeader.startsWith("Bearer ") && req.user?.role === "CANDIDAT") {
+    if (req.user?.role === "CANDIDAT") {
       const profil = await getProfilCandidat(req.user.id);
       match = calculerMatching(profil, {
         filiereId: offre.filiereId,
@@ -133,7 +188,7 @@ offresRoutes.get("/:id", async (req, res, next) => {
 
     res.json({
       ...offre,
-      statut: offre.dateLimite < new Date() ? "CLOTUREE" : "OUVERTE",
+      statut: statutOffre(offre.dateLimite),
       nbCandidatures: offre._count.candidatures,
       match,
     });
@@ -160,7 +215,7 @@ offresRoutes.post("/", authenticate, requireRole("RECRUTEUR", "ADMIN"), async (r
 offresRoutes.put("/:id", authenticate, requireRole("RECRUTEUR", "ADMIN"), async (req, res, next) => {
   try {
     const data = offreSchema.partial().parse(req.body);
-    const offre = await prisma.offre.findUnique({ where: { id: Number(req.params.id) }, include: { organisme: true } });
+    const offre = await prisma.offre.findUnique({ where: { id: idSchema.parse(req.params.id) }, select: { id: true, organisme: { select: { utilisateurId: true } } } });
     if (!offre) throw new HttpError(404, "Offre introuvable");
     if (req.user!.role !== "ADMIN" && offre.organisme.utilisateurId !== req.user!.id) throw new HttpError(403, "Acces refuse");
     const maj = await prisma.offre.update({ where: { id: offre.id }, data, include: offreInclude });
@@ -173,7 +228,7 @@ offresRoutes.put("/:id", authenticate, requireRole("RECRUTEUR", "ADMIN"), async 
 // Suppression (recruteur proprietaire ou admin)
 offresRoutes.delete("/:id", authenticate, requireRole("RECRUTEUR", "ADMIN"), async (req, res, next) => {
   try {
-    const offre = await prisma.offre.findUnique({ where: { id: Number(req.params.id) }, include: { organisme: true } });
+    const offre = await prisma.offre.findUnique({ where: { id: idSchema.parse(req.params.id) }, select: { id: true, organisme: { select: { utilisateurId: true } } } });
     if (!offre) throw new HttpError(404, "Offre introuvable");
     if (req.user!.role !== "ADMIN" && offre.organisme.utilisateurId !== req.user!.id) throw new HttpError(403, "Acces refuse");
     await prisma.offre.delete({ where: { id: offre.id } });
@@ -185,10 +240,10 @@ offresRoutes.delete("/:id", authenticate, requireRole("RECRUTEUR", "ADMIN"), asy
 // Recruteur : candidats pertinents pour une offre (matching inverse)
 offresRoutes.get("/:id/candidats-pertinents", authenticate, requireRole("RECRUTEUR", "ADMIN"), async (req, res, next) => {
   try {
-    const id = Number(req.params.id);
+    const id = idSchema.parse(req.params.id);
     const offre = await prisma.offre.findUnique({
       where: { id },
-      include: { organisme: true, filiere: true },
+      select: { id: true, filiereId: true, niveauRequis: true, competencesRecherchees: true, lieu: true, organisme: { select: { utilisateurId: true } } },
     });
     if (!offre) return next(new HttpError(404, "Offre introuvable"));
     if (offre.organisme.utilisateurId !== req.user!.id && req.user!.role !== "ADMIN") {

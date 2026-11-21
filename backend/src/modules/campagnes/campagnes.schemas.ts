@@ -12,13 +12,13 @@ export const campagneSchema = z
   });
 
 export const generateSchema = z.object({
-  promotionId: z.coerce.number().int().positive().optional(),
-  filiereId: z.coerce.number().int().positive().optional(),
-  anneeSortie: z.coerce.number().int().optional(),
+  promotionId: z.coerce.number().int().positive().max(Number.MAX_SAFE_INTEGER).optional(),
+  filiereId: z.coerce.number().int().positive().max(Number.MAX_SAFE_INTEGER).optional(),
+  anneeSortie: z.coerce.number().int().min(1990).max(2100).optional(),
 });
 
 export const invitationQuerySchema = z.object({
-  page: z.coerce.number().int().min(1).default(1),
+  page: z.coerce.number().int().min(1).max(10000).default(1),
   limite: z.coerce.number().int().min(1).max(100).default(20),
   statut: z.enum(["repondu", "en_attente"]).optional(),
 });

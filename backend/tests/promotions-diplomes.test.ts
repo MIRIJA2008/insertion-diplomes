@@ -168,4 +168,61 @@ describe("Diplomes", () => {
     const apres = await request(app).get(`/api/diplomes/${diplomeId}`).set(auth(admin));
     expect(apres.status).toBe(404);
   });
+  it("supprime definitivement le diplome, ses invitations et ses reponses", async () => {
+    const campagne = await prisma.campagne.create({
+      data: {
+        titre: "Test suppression en cascade",
+        dateDebut: new Date("2026-11-01T00:00:00.000Z"),
+        dateFin: new Date("2026-12-15T00:00:00.000Z"),
+      },
+    });
+
+    const diplome = await prisma.diplome.create({
+      data: {
+        nom: "TestCascade",
+        prenom: "Suppression",
+        promotionId: promoB,
+      },
+    });
+
+    const invitation = await prisma.invitation.create({
+      data: {
+        campagneId: campagne.id,
+        diplomeId: diplome.id,
+        jeton: `cascade-${Date.now()}-${Math.random()}`,
+      },
+    });
+
+    const reponse = await prisma.reponse.create({
+      data: {
+        invitationId: invitation.id,
+        situation: "EMPLOI_SALARIE",
+        ville: "Antananarivo",
+        consentement: true,
+      },
+    });
+
+    const suppression = await request(app)
+      .delete(`/api/diplomes/${diplome.id}`)
+      .set(auth(admin));
+
+    expect(suppression.status).toBe(204);
+
+    const diplomeApres = await prisma.diplome.findUnique({
+      where: { id: diplome.id },
+      select: { id: true },
+    });
+    const invitationApres = await prisma.invitation.findUnique({
+      where: { id: invitation.id },
+      select: { id: true },
+    });
+    const reponseApres = await prisma.reponse.findUnique({
+      where: { id: reponse.id },
+      select: { id: true },
+    });
+
+    expect(diplomeApres).toBeNull();
+    expect(invitationApres).toBeNull();
+    expect(reponseApres).toBeNull();
+  });
 });

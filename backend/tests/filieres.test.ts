@@ -1,6 +1,8 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import request from "supertest";
 import bcrypt from "bcryptjs";
+import jwt from "jsonwebtoken";
+import { env } from "../src/config/env";
 import { app } from "../src/app";
 import { prisma } from "../src/config/prisma";
 
@@ -52,6 +54,48 @@ describe("Authentification", () => {
     expect(res.status).toBe(401);
   });
 
+  it("refuse un jeton malforme", async () => {
+    const res = await request(app)
+      .get("/api/filieres")
+      .set("Authorization", "Bearer jeton-invalide");
+    expect(res.status).toBe(401);
+  });
+
+  it("refuse un jeton signe avec un algorithme interdit", async () => {
+    const token = jwt.sign({ role: "ADMIN" }, env.JWT_SECRET, {
+      subject: "1",
+      expiresIn: "1h",
+      algorithm: "HS384",
+    });
+    const res = await request(app)
+      .get("/api/filieres")
+      .set("Authorization", `Bearer ${token}`);
+    expect(res.status).toBe(401);
+  });
+
+  it("refuse un jeton expire", async () => {
+    const token = jwt.sign({ role: "ADMIN" }, env.JWT_SECRET, {
+      subject: "1",
+      expiresIn: -1,
+      algorithm: "HS256",
+    });
+    const res = await request(app)
+      .get("/api/filieres")
+      .set("Authorization", `Bearer ${token}`);
+    expect(res.status).toBe(401);
+  });
+
+  it("refuse un role absent des roles autorises", async () => {
+    const token = jwt.sign({ role: "SUPERADMIN" }, env.JWT_SECRET, {
+      subject: "1",
+      expiresIn: "1h",
+      algorithm: "HS256",
+    });
+    const res = await request(app)
+      .get("/api/filieres")
+      .set("Authorization", `Bearer ${token}`);
+    expect(res.status).toBe(401);
+  });
   it("ne renvoie jamais le hash du mot de passe", async () => {
     const res = await request(app)
       .post("/api/auth/login")

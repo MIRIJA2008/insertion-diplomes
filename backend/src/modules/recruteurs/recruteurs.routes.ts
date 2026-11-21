@@ -13,6 +13,19 @@ const organismeSchema = z.object({
   description: z.string().optional(),
 });
 
+
+const invitationSchema = z.object({
+  diplomeId: z.coerce.number().int().positive().max(Number.MAX_SAFE_INTEGER),
+  message: z.string().trim().max(2000).optional(),
+});const decouverteQuerySchema = z.object({
+  q: z.string().trim().max(100).optional(),
+  filiereId: z.preprocess(
+    (v) => v === "" ? undefined : v,
+    z.coerce.number().int().positive().max(Number.MAX_SAFE_INTEGER).optional()
+  ),
+  niveau: z.string().trim().max(100).optional(),
+});
+
 recruteursRoutes.get("/moi/organisme", async (req, res, next) => {
   try {
     const organisme = await prisma.organisme.findUnique({
@@ -41,7 +54,7 @@ recruteursRoutes.put("/moi/organisme", async (req, res, next) => {
 // Recherche de diplômés par les recruteurs
 recruteursRoutes.get("/decouvrir", async (req, res, next) => {
   try {
-    const { q, filiereId, niveau } = req.query;
+    const { q, filiereId, niveau } = decouverteQuerySchema.parse(req.query);
     const where: any = { role: "CANDIDAT", profilCandidat: { isNot: null } };
     
     if (q) {
@@ -60,13 +73,21 @@ recruteursRoutes.get("/decouvrir", async (req, res, next) => {
     const diplomes = await prisma.utilisateur.findMany({
       where,
       select: {
-        id: true, nom: true, email: true, creeLe: true,
+        id: true,
+        nom: true,
+        email: true,
+        creeLe: true,
         profilCandidat: {
-          include: { filiere: true }
-        }
+          select: {
+            niveauEtudes: true,
+            competences: true,
+            verifie: true,
+            filiere: { select: { code: true, intitule: true } },
+          },
+        },
       },
       take: 50,
-      orderBy: { creeLe: "desc" }
+      orderBy: { creeLe: "desc" },
     });
     res.json(diplomes);
   } catch (e) { next(e); }
@@ -75,21 +96,46 @@ recruteursRoutes.get("/decouvrir", async (req, res, next) => {
 // Inviter un diplômé à postuler (envoi de notification)
 recruteursRoutes.post("/inviter", async (req, res, next) => {
   try {
-    const { diplomeId, message } = req.body;
+    const { diplomeId, message } = invitationSchema.parse(req.body);
     const recruteurId = req.user!.id;
 
-    const organisme = await prisma.organisme.findUnique({ where: { utilisateurId: recruteurId } });
-    if (!organisme) return res.status(403).json({ error: "Vous devez avoir un organisme." });
+    const organisme = await prisma.organisme.findUnique({
+      where: { utilisateurId: recruteurId },
+      select: { nom: true },
+    });
 
-    // Créer la notification
+    if (!organisme) {
+      return res.status(403).json({
+        error: "Vous devez avoir un organisme.",
+      });
+    }
+
+    const candidat = await prisma.utilisateur.findFirst({
+      where: {
+        id: diplomeId,
+        role: "CANDIDAT",
+      },
+      select: { id: true },
+    });
+
+    if (!candidat) {
+      return res.status(404).json({
+        error: "Diplômé introuvable.",
+      });
+    }
+
     await prisma.notification.create({
       data: {
-        utilisateurId: diplomeId,
+        utilisateurId: candidat.id,
         titre: "Invitation à postuler",
-        contenu: message || `L'organisme ${organisme.nom} vous invite à consulter ses offres.`,
-      }
+        contenu:
+          message ||
+          `L'organisme ${organisme.nom} vous invite à consulter ses offres.`,
+      },
     });
 
     res.json({ ok: true });
-  } catch (e) { next(e); }
+  } catch (e) {
+    next(e);
+  }
 });

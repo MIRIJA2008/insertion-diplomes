@@ -5,6 +5,8 @@ import { authenticate } from "../../middlewares/authenticate";
 import { HttpError } from "../../utils/httpError";
 
 export const messagerieRoutes = Router();
+
+const idSchema = z.coerce.number().int().positive().max(Number.MAX_SAFE_INTEGER);
 messagerieRoutes.use(authenticate);
 
 messagerieRoutes.get("/conversations", async (req, res, next) => {
@@ -25,9 +27,9 @@ messagerieRoutes.get("/conversations", async (req, res, next) => {
 
 messagerieRoutes.post("/conversations", async (req, res, next) => {
   try {
-    const { utilisateurId } = z.object({ utilisateurId: z.number().int() }).parse(req.body);
+    const { utilisateurId } = z.object({ utilisateurId: z.number().int().positive().max(Number.MAX_SAFE_INTEGER) }).parse(req.body);
     if (utilisateurId === req.user!.id) throw new HttpError(400, "Vous ne pouvez pas ecrire a vous-meme");
-    const autre = await prisma.utilisateur.findUnique({ where: { id: utilisateurId } });
+    const autre = await prisma.utilisateur.findUnique({ where: { id: utilisateurId }, select: { id: true } });
     if (!autre) throw new HttpError(404, "Utilisateur introuvable");
     const existante = await prisma.conversation.findFirst({
       where: {
@@ -48,11 +50,11 @@ messagerieRoutes.post("/conversations", async (req, res, next) => {
 messagerieRoutes.get("/conversations/:id/messages", async (req, res, next) => {
   try {
     const membre = await prisma.conversationMembre.findUnique({
-      where: { conversationId_utilisateurId: { conversationId: Number(req.params.id), utilisateurId: req.user!.id } },
+      where: { conversationId_utilisateurId: { conversationId: idSchema.parse(req.params.id), utilisateurId: req.user!.id } },
     });
     if (!membre) throw new HttpError(403, "Acces refuse");
     const messages = await prisma.message.findMany({
-      where: { conversationId: Number(req.params.id) },
+      where: { conversationId: idSchema.parse(req.params.id) },
       include: { auteur: { select: { id: true, nom: true } } },
       orderBy: { envoyeLe: "asc" },
       take: 200,
@@ -65,31 +67,16 @@ messagerieRoutes.get("/conversations/:id/messages", async (req, res, next) => {
 
 messagerieRoutes.post("/conversations/:id/messages", async (req, res, next) => {
   try {
-    const conversationId = Number(req.params.id);
+    const conversationId = idSchema.parse(req.params.id);
     const membre = await prisma.conversationMembre.findUnique({
       where: { conversationId_utilisateurId: { conversationId, utilisateurId: req.user!.id } },
     });
     if (!membre) throw new HttpError(403, "Acces refuse");
-    const { contenu } = z.object({ contenu: z.string().min(1).max(2000) }).parse(req.body);
+    const { contenu } = z.object({ contenu: z.string().trim().min(1).max(2000) }).parse(req.body);
     const message = await prisma.message.create({
       data: { conversationId, auteurId: req.user!.id, contenu },
       include: { auteur: { select: { id: true, nom: true } } },
     });
-    // Notifier les autres membres de la conversation (fire & forget)
-    prisma.conversationMembre.findMany({
-      where: { conversationId: Number(req.params.id), NOT: { utilisateurId: req.user!.id } },
-      select: { utilisateurId: true },
-    }).then((membres) => {
-      if (membres.length > 0) {
-        prisma.notification.createMany({
-          data: membres.map((m) => ({
-            utilisateurId: m.utilisateurId,
-            titre: "Nouveau message",
-            contenu: "Vous avez recu un nouveau message.",
-          })),
-        }).catch(() => {});
-      }
-    }).catch(() => {});
     const autres = await prisma.conversationMembre.findMany({
       where: { conversationId, utilisateurId: { not: req.user!.id } },
     });

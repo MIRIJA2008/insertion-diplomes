@@ -1,4 +1,4 @@
-import { Router } from "express";
+﻿import { Router } from "express";
 import { z } from "zod";
 import { prisma } from "../../config/prisma";
 import { authenticate, requireRole } from "../../middlewares/authenticate";
@@ -6,12 +6,14 @@ import { authenticate, requireRole } from "../../middlewares/authenticate";
 export const suggestionsRoutes = Router();
 suggestionsRoutes.use(authenticate);
 
-// Envoyer une suggestion (Diplômé / Recruteur)
+const idSchema = z.coerce.number().int().positive().max(Number.MAX_SAFE_INTEGER);
+
+// Envoyer une suggestion (DiplÃ´mÃ© / Recruteur)
 suggestionsRoutes.post("/", async (req, res, next) => {
   try {
     const { categorie, contenu } = z.object({
-      categorie: z.string().min(2),
-      contenu: z.string().min(10).max(2000),
+      categorie: z.enum(["AMELIORATION", "FONCTIONNALITE", "BUG", "AUTRE"]),
+      contenu: z.string().trim().min(10).max(2000),
     }).parse(req.body);
 
     const sugg = await prisma.suggestion.create({
@@ -36,11 +38,11 @@ suggestionsRoutes.patch("/:id", requireRole("ADMIN", "CONSULTANT"), async (req, 
   try {
     const { statut, reponse } = z.object({
       statut: z.enum(["NOUVELLE", "EN_COURS", "RETENUE", "MISE_EN_OEUVRE", "REFUSEE"]),
-      reponse: z.string().optional(),
+      reponse: z.string().trim().max(2000).optional(),
     }).parse(req.body);
 
     const sugg = await prisma.suggestion.update({
-      where: { id: Number(req.params.id) },
+      where: { id: idSchema.parse(req.params.id) },
       data: { statut, reponse },
     });
     res.json(sugg);

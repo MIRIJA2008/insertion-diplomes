@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type FormEvent } from "react";
-import { api } from "../../api";
+import { api, apiBlob, telechargerBlob } from "../../api";
 
 interface Filiere { id: number; code: string; intitule: string }
 
@@ -41,6 +41,7 @@ export default function CandidatProfil() {
   const [saving, setSaving] = useState(false);
   const [cvFile, setCvFile] = useState<File | null>(null);
   const [cvUploading, setCvUploading] = useState(false);
+  const [cvDownloading, setCvDownloading] = useState(false);
   const [cvMessage, setCvMessage] = useState("");
   const [dragOver, setDragOver] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -102,16 +103,23 @@ export default function CandidatProfil() {
     setCvUploading(true);
     setCvMessage("");
     try {
-      const base64 = await new Promise<string>((resolve, reject) => {
+      const contenu = await new Promise<string>((resolve, reject) => {
         const reader = new FileReader();
         reader.onload = () => {
-          const result = reader.result as string;
-          resolve(result.split(",")[1] ?? result);
+          if (typeof reader.result !== "string") {
+            reject(new Error("Lecture du fichier impossible"));
+            return;
+          }
+          resolve(reader.result);
         };
         reader.onerror = () => reject(new Error("Lecture du fichier impossible"));
         reader.readAsDataURL(file);
       });
-      await api("/profils/moi/cv", { method: "POST", body: { cvPdf: base64, cvNom: file.name } });
+
+      await api("/profils/moi/cv", {
+        method: "POST",
+        body: { nom: file.name, contenu },
+      });
       setCvMessage(`CV "${file.name}" envoye avec succes`);
       setCvFile(null);
       if (fileInputRef.current) fileInputRef.current.value = "";
@@ -123,6 +131,18 @@ export default function CandidatProfil() {
     }
   };
 
+  const telechargerMonCv = async () => {
+    setCvDownloading(true);
+    setCvMessage("");
+    try {
+      const blob = await apiBlob("/profils/moi/cv");
+      telechargerBlob(blob, data?.profil?.cvNom || "CV.pdf");
+    } catch (e) {
+      setCvMessage(e instanceof Error ? e.message : "Erreur de telechargement");
+    } finally {
+      setCvDownloading(false);
+    }
+  };
   const surFichier = (e: React.ChangeEvent<HTMLInputElement>) => {
     const f = e.target.files?.[0];
     if (f) {
@@ -165,15 +185,15 @@ export default function CandidatProfil() {
               <div className="cand-cv-file-size">CV uploade</div>
             </div>
             <div style={{ display: "flex", gap: ".4rem" }}>
-              <a
-                href="/api/profils/moi/cv"
-                target="_blank"
-                rel="noopener noreferrer"
+              <button
+                type="button"
                 className="pf-btn"
                 style={{ padding: ".4rem .75rem", fontSize: ".8rem" }}
+                onClick={telechargerMonCv}
+                disabled={cvDownloading}
               >
-                Telecharger
-              </a>
+                {cvDownloading ? "Telechargement..." : "Telecharger"}
+              </button>
               <button
                 type="button"
                 className="pf-btn pf-btn-ghost"

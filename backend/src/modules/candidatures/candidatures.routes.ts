@@ -6,12 +6,19 @@ import { HttpError } from "../../utils/httpError";
 import { statutOffre } from "../offres/offres.routes";
 
 export const candidaturesRoutes = Router();
+const idSchema = z.coerce.number().int().positive().max(Number.MAX_SAFE_INTEGER);
+const offreIdQuerySchema = z.object({
+  offreId: z.preprocess(
+    (value) => value === "" ? undefined : value,
+    z.coerce.number().int().positive().max(Number.MAX_SAFE_INTEGER).optional()
+  ),
+});
 
 // Postuler (candidat) - refuse si l'offre est cloturee
 candidaturesRoutes.post("/offres/:id/postuler", authenticate, requireRole("CANDIDAT", "ADMIN"), async (req, res, next) => {
   try {
     const { lettre } = z.object({ lettre: z.string().max(2000).optional() }).parse(req.body ?? {});
-    const offre = await prisma.offre.findUnique({ where: { id: Number(req.params.id) } });
+    const offre = await prisma.offre.findUnique({ where: { id: idSchema.parse(req.params.id) } });
     if (!offre) throw new HttpError(404, "Offre introuvable");
     if (statutOffre(offre.dateLimite) === "CLOTUREE") {
       throw new HttpError(400, "Cette offre est cloturee : la candidature est impossible");
@@ -32,7 +39,7 @@ candidaturesRoutes.post("/offres/:id/postuler", authenticate, requireRole("CANDI
         auteurId: req.user!.id,
       },
     });
-    const org = await prisma.organisme.findUnique({ where: { id: offre.organismeId } });
+    const org = await prisma.organisme.findUnique({ where: { id: offre.organismeId }, select: { utilisateurId: true } });
     if (org) {
       await prisma.notification.create({
         data: {
@@ -71,7 +78,7 @@ candidaturesRoutes.get("/recruteur/candidatures", authenticate, requireRole("REC
       where: { offre: { organismeId: organisme.id } },
       include: {
         offre: { select: { id: true, titre: true, dateLimite: true } },
-        candidat: { select: { id: true, nom: true, email: true, profilCandidat: { include: { filiere: true } } } },
+        candidat: { select: { id: true, nom: true, email: true, profilCandidat: { select: { niveauEtudes: true, etablissement: true, diplomes: true, competences: true, experience: true, filiere: { select: { code: true, intitule: true } } } } } },
       },
       orderBy: { dateEnvoi: "desc" },
     });
@@ -86,8 +93,8 @@ candidaturesRoutes.patch("/candidatures/:id/statut", authenticate, requireRole("
   try {
     const { statut, commentaire } = z.object({ statut: z.enum(["ENVOYEE", "VUE", "ACCEPTEE", "REFUSEE"]), commentaire: z.string().max(500).optional() }).parse(req.body);
     const c = await prisma.candidature.findUnique({
-      where: { id: Number(req.params.id) },
-      include: { offre: { include: { organisme: true } } },
+      where: { id: idSchema.parse(req.params.id) },
+      select: { id: true, candidatId: true, statut: true, offre: { select: { titre: true, organisme: { select: { utilisateurId: true } } } } },
     });
     if (!c) throw new HttpError(404, "Candidature introuvable");
     if (req.user!.role !== "ADMIN" && c.offre.organisme.utilisateurId !== req.user!.id) throw new HttpError(403, "Acces refuse");
@@ -117,7 +124,7 @@ candidaturesRoutes.patch("/candidatures/:id/statut", authenticate, requireRole("
 // Ajouter / retirer un favori
 candidaturesRoutes.put("/offres/:id/favori", authenticate, async (req, res, next) => {
   try {
-    const offreId = Number(req.params.id);
+    const offreId = idSchema.parse(req.params.id);
     const existant = await prisma.favori.findUnique({
       where: { offreId_utilisateurId: { offreId, utilisateurId: req.user!.id } },
     });
@@ -147,7 +154,7 @@ candidaturesRoutes.get("/mes-favoris", authenticate, async (req, res, next) => {
 // Pipeline recruteur : candidatures groupees par statut + filtres
 candidaturesRoutes.get("/recruteur/pipeline", authenticate, requireRole("RECRUTEUR", "ADMIN"), async (req, res, next) => {
   try {
-    const { offreId } = req.query;
+    const { offreId } = offreIdQuerySchema.parse(req.query);
     const organisme = await prisma.organisme.findUnique({ where: { utilisateurId: req.user!.id } });
     if (!organisme) {
       return res.json({ ENVOYEE: [], VUE: [], ACCEPTEE: [], REFUSEE: [], stats: { total: 0, parStatut: {} } });
@@ -195,7 +202,7 @@ candidaturesRoutes.get("/recruteur/pipeline", authenticate, requireRole("RECRUTE
 // ============================================================
 candidaturesRoutes.get("/candidatures/:id", authenticate, async (req, res, next) => {
   try {
-    const id = Number(req.params.id);
+    const id = idSchema.parse(req.params.id);
     const cand = await prisma.candidature.findUnique({
       where: { id },
       include: {
@@ -203,7 +210,7 @@ candidaturesRoutes.get("/candidatures/:id", authenticate, async (req, res, next)
         candidat: {
           select: {
             id: true, nom: true, email: true,
-            profilCandidat: { include: { filiere: true } },
+            profilCandidat: { select: { niveauEtudes: true, etablissement: true, diplomes: true, competences: true, experience: true, filiere: { select: { code: true, intitule: true } } } },
           },
         },
         historique: {
@@ -227,10 +234,10 @@ candidaturesRoutes.get("/candidatures/:id", authenticate, async (req, res, next)
 
 candidaturesRoutes.get("/candidatures/:id/historique", authenticate, async (req, res, next) => {
   try {
-    const id = Number(req.params.id);
+    const id = idSchema.parse(req.params.id);
     const cand = await prisma.candidature.findUnique({
       where: { id },
-      include: { offre: { include: { organisme: true } } },
+      select: { id: true, candidatId: true, statut: true, offre: { select: { titre: true, organisme: { select: { utilisateurId: true } } } } },
     });
     if (!cand) return next(new HttpError(404, "Candidature introuvable"));
 
@@ -253,7 +260,7 @@ candidaturesRoutes.get("/candidatures/:id/historique", authenticate, async (req,
 
 candidaturesRoutes.delete("/mes-candidatures/:id", authenticate, async (req, res, next) => {
   try {
-    const id = Number(req.params.id);
+    const id = idSchema.parse(req.params.id);
     const cand = await prisma.candidature.findUnique({ where: { id } });
     if (!cand) return next(new HttpError(404, "Candidature introuvable"));
     if (cand.candidatId !== req.user!.id) {

@@ -69,6 +69,46 @@ export async function api<T>(path: string, options: Options = {}): Promise<T> {
   return data as T;
 }
 
+export async function apiBlob(path: string): Promise<Blob> {
+  const session = getSession();
+  const res = await fetch(`/api${path}`, {
+    method: "GET",
+    headers: session ? { Authorization: `Bearer ${session.token}` } : {},
+  });
+
+  if (!res.ok) {
+    const data = await res.json().catch(() => null);
+
+    if (res.status === 401 && session) {
+      setSession(null);
+      window.location.assign("/login");
+    }
+
+    const details = Array.isArray(data?.details)
+      ? data.details.map((d: { champ: string; message: string }) => `${d.champ} : ${d.message}`).join(" ; ")
+      : "";
+
+    throw new ApiError(
+      res.status,
+      [data?.error ?? "Impossible de telecharger le fichier", details].filter(Boolean).join(" - ")
+    );
+  }
+
+  return res.blob();
+}
+
+export function telechargerBlob(blob: Blob, nomFichier: string) {
+  const url = URL.createObjectURL(blob);
+  const lien = document.createElement("a");
+  lien.href = url;
+  lien.download = nomFichier;
+  lien.style.display = "none";
+  document.body.appendChild(lien);
+  lien.click();
+  lien.remove();
+  window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
 export interface Offre {
   id: number;
   titre: string;

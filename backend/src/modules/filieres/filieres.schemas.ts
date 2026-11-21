@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-export const idSchema = z.coerce.number().int().positive();
+export const idSchema = z.coerce.number().int().positive().max(Number.MAX_SAFE_INTEGER);
 
 export const filiereSchema = z.object({
   code: z.string().trim().min(1).max(20).toUpperCase(),

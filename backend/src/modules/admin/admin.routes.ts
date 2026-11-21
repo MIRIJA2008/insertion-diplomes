@@ -1,9 +1,31 @@
+import { z } from "zod";
 import { Router } from "express";
 import { prisma } from "../../config/prisma";
 import { authenticate, requireRole } from "../../middlewares/authenticate";
+import { idSchema } from "../filieres/filieres.schemas";
 
 export const adminRoutes = Router();
 adminRoutes.use(authenticate, requireRole("ADMIN", "CONSULTANT"));
+const validationOrganismeSchema = z.object({
+  verifie: z.boolean(),
+});
+
+const validationAlerteSchema = z.object({
+  statut: z.enum(["NOUVELLE", "EN_COURS", "RESOLUE"]),
+  commentaire: z.string().trim().max(2000).nullable().optional(),
+});
+
+const adminDiplomesQuerySchema = z.object({
+  q: z.string().trim().max(100).optional(),
+  filiereId: z.preprocess(
+    (v) => v === "" ? undefined : v,
+    z.coerce.number().int().positive().max(Number.MAX_SAFE_INTEGER).optional()
+  ),
+});
+
+const adminOrganismesQuerySchema = z.object({
+  q: z.string().trim().max(100).optional(),
+});
 
 // Journal d'audit
 adminRoutes.get("/audit", async (req, res, next) => {
@@ -57,7 +79,7 @@ adminRoutes.get("/dashboard", async (req, res, next) => {
 // Liste des diplômés avec recherche et filtres
 adminRoutes.get("/diplomes", async (req, res, next) => {
   try {
-    const { q, filiereId } = req.query;
+    const { q, filiereId } = adminDiplomesQuerySchema.parse(req.query);
     const where: any = { role: "CANDIDAT" };
     
     if (q) {
@@ -73,8 +95,17 @@ adminRoutes.get("/diplomes", async (req, res, next) => {
 
     const diplomes = await prisma.utilisateur.findMany({
       where,
-      include: {
-        profilCandidat: { include: { filiere: true } },
+      select: {
+        id: true,
+        nom: true,
+        email: true,
+        creeLe: true,
+        profilCandidat: {
+          select: {
+            niveauEtudes: true,
+            filiere: { select: { code: true, intitule: true } },
+          },
+        },
         _count: { select: { candidatures: true } },
       },
       orderBy: { creeLe: "desc" },
@@ -87,19 +118,40 @@ adminRoutes.get("/diplomes", async (req, res, next) => {
 // Fiche complete d'un diplome
 adminRoutes.get("/diplomes/:id", async (req, res, next) => {
   try {
-    const id = Number(req.params.id);
+    const id = idSchema.parse(req.params.id);
     const diplome = await prisma.utilisateur.findUnique({
       where: { id },
-      include: {
-        profilCandidat: { include: { filiere: true } },
+      select: {
+        id: true,
+        nom: true,
+        email: true,
+        creeLe: true,
+        profilCandidat: {
+          select: {
+            niveauEtudes: true,
+            etablissement: true,
+            competences: true,
+            situationPro: true,
+            verifie: true,
+            filiere: { select: { code: true, intitule: true } },
+          },
+        },
         candidatures: {
-          include: {
-            offre: { include: { organisme: true } },
-            historique: { orderBy: { creeLe: "desc" } },
+          select: {
+            id: true,
+            statut: true,
+            dateEnvoi: true,
+            offre: {
+              select: {
+                titre: true,
+                organisme: {
+                  select: { nom: true },
+                },
+              },
+            },
           },
           orderBy: { dateEnvoi: "desc" },
         },
-        favoris: { include: { offre: true } },
       },
     });
     if (!diplome) return res.status(404).json({ error: "Diplome introuvable" });
@@ -109,7 +161,7 @@ adminRoutes.get("/diplomes/:id", async (req, res, next) => {
 // Liste des organismes recruteurs
 adminRoutes.get("/organismes", async (req, res, next) => {
   try {
-    const { q } = req.query;
+    const { q } = adminOrganismesQuerySchema.parse(req.query);
     const where: any = {};
     if (q) {
       where.nom = { contains: String(q), mode: "insensitive" };
@@ -130,7 +182,7 @@ adminRoutes.get("/organismes", async (req, res, next) => {
 // Detail d'un organisme
 adminRoutes.get("/organismes/:id", async (req, res, next) => {
   try {
-    const id = Number(req.params.id);
+    const id = idSchema.parse(req.params.id);
     const organisme = await prisma.organisme.findUnique({
       where: { id },
       include: {
@@ -149,14 +201,14 @@ adminRoutes.get("/organismes/:id", async (req, res, next) => {
 });
 
 // Verifier un organisme
-adminRoutes.patch("/organismes/:id/verifier", async (req, res, next) => {
+adminRoutes.patch("/organismes/:id/verifier", requireRole("ADMIN"), async (req, res, next) => {
   try {
-    const id = Number(req.params.id);
-    const { verifie } = req.body;
+    const id = idSchema.parse(req.params.id);
+    const { verifie } = validationOrganismeSchema.parse(req.body);
     
     const updated = await prisma.organisme.update({
       where: { id },
-      data: { verifie: Boolean(verifie) },
+      data: { verifie },
     });
 
     await prisma.activiteLog.create({
@@ -201,7 +253,19 @@ adminRoutes.get("/export/diplomes", async (req, res, next) => {
   try {
     const diplomes = await prisma.utilisateur.findMany({
       where: { role: "CANDIDAT" },
-      include: { profilCandidat: { include: { filiere: true } } },
+      select: {
+        nom: true,
+        email: true,
+        creeLe: true,
+        profilCandidat: {
+          select: {
+            niveauEtudes: true,
+            situationPro: true,
+            verifie: true,
+            filiere: { select: { intitule: true } },
+          },
+        },
+      },
     });
 
     let csv = "Nom,Email,Inscrit le,Filiere,Niveau,Situation,Verifie\n";
@@ -257,17 +321,33 @@ adminRoutes.get("/alertes", async (req, res, next) => {
 });
 
 // Générer des alertes automatiquement (scan de la base)
-adminRoutes.post("/alertes/generer", async (req, res, next) => {
+adminRoutes.post("/alertes/generer", requireRole("ADMIN"), async (req, res, next) => {
   try {
     let count = 0;
     const diplomes = await prisma.utilisateur.findMany({
       where: { role: "CANDIDAT" },
-      include: { profilCandidat: true },
+      select: {
+        id: true,
+        profilCandidat: {
+          select: {
+            etablissement: true,
+            situationPro: true,
+          },
+        },
+      },
     });
+
+    const profilsAvecCv = await prisma.profilCandidat.findMany({
+      where: { cvPdf: { not: null } },
+      select: { utilisateurId: true },
+    });
+    const idsProfilsAvecCv = new Set(
+      profilsAvecCv.map((profil) => profil.utilisateurId),
+    );
 
     for (const d of diplomes) {
       // 1. Alerte : Profil incomplet
-      if (!d.profilCandidat?.cvPdf || !d.profilCandidat?.etablissement) {
+      if (!idsProfilsAvecCv.has(d.id) || !d.profilCandidat?.etablissement) {
         const existe = await prisma.alerteAdmin.findFirst({
           where: { diplomeId: d.id, type: "PROFIL_INCOMPLET", statut: { not: "RESOLUE" } },
         });
@@ -298,11 +378,12 @@ adminRoutes.post("/alertes/generer", async (req, res, next) => {
 });
 
 // Changer le statut d'une alerte
-adminRoutes.patch("/alertes/:id", async (req, res, next) => {
+adminRoutes.patch("/alertes/:id", requireRole("ADMIN"), async (req, res, next) => {
   try {
-    const { statut, commentaire } = req.body;
+    const id = idSchema.parse(req.params.id);
+    const { statut, commentaire } = validationAlerteSchema.parse(req.body);
     const alerte = await prisma.alerteAdmin.update({
-      where: { id: Number(req.params.id) },
+      where: { id },
       data: { statut, commentaire },
     });
     res.json(alerte);

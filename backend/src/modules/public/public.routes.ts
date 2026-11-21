@@ -1,4 +1,4 @@
-import { Router } from "express";
+﻿import { Router } from "express";
 import { prisma } from "../../config/prisma";
 import { statutOffre } from "../offres/offres.routes";
 
@@ -16,14 +16,36 @@ publicRoutes.get("/accueil", async (_req, res, next) => {
     ]);
     const dernieresOffres = await prisma.offre.findMany({
       where: { dateLimite: { gte: new Date() } },
-      include: { organisme: { select: { nom: true, type: true, ville: true } }, filiere: { select: { code: true } } },
+      select: {
+        id: true,
+        organismeId: true,
+        titre: true,
+        description: true,
+        niveauRequis: true,
+        filiereId: true,
+        competencesRecherchees: true,
+        profilRecherche: true,
+        lieu: true,
+        typeContrat: true,
+        dateLimite: true,
+        creeLe: true,
+        organisme: {
+          select: { id: true, nom: true, type: true, ville: true, verifie: true },
+        },
+        filiere: {
+          select: { id: true, code: true, intitule: true },
+        },
+        _count: {
+          select: { candidatures: true },
+        },
+      },
       orderBy: { creeLe: "desc" },
       take: 6,
     });
     res.json({
       stats: { diplomes, offres, organismes, filieres, candidats, reponsesEnquete },
       categories: ["MINISTERE", "ADMINISTRATION", "ENTREPRISE_PRIVEE", "ONG", "AUTRE"],
-      dernieresOffres: dernieresOffres.map((o) => ({ ...o, statut: statutOffre(o.dateLimite) })),
+      dernieresOffres: dernieresOffres.map(({ _count, ...o }) => ({ ...o, statut: statutOffre(o.dateLimite), nbCandidatures: _count.candidatures })),
     });
   } catch (e) {
     next(e);

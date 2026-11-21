@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
-import { api } from "../../api";
+import { api, apiBlob, telechargerBlob } from "../../api";
 
 interface ProfilDetail {
   utilisateur: { id: number; nom: string; email: string };
@@ -25,6 +25,8 @@ export default function RecruteurCandidatDetail() {
   const { id } = useParams();
   const [data, setData] = useState<ProfilDetail | null>(null);
   const [erreur, setErreur] = useState("");
+  const [cvDownloading, setCvDownloading] = useState(false);
+  const [cvErreur, setCvErreur] = useState("");
 
   useEffect(() => {
     // Utilisation de api() qui gère automatiquement le token
@@ -33,6 +35,21 @@ export default function RecruteurCandidatDetail() {
       .catch((e) => setErreur(e.message));
   }, [id]);
 
+  const telechargerCvCandidat = async () => {
+    if (!id) return;
+
+    setCvDownloading(true);
+    setCvErreur("");
+
+    try {
+      const blob = await apiBlob(`/profils/${id}/cv`);
+      telechargerBlob(blob, data?.profil.cvNom || `CV-candidat-${id}.pdf`);
+    } catch (e) {
+      setCvErreur(e instanceof Error ? e.message : "Erreur de telechargement");
+    } finally {
+      setCvDownloading(false);
+    }
+  };
   if (erreur) return (
     <div>
       <Link to="/recruteur/candidatures" className="pf-back"><span className="pf-back-icon">&larr;</span> Retour</Link>
@@ -61,9 +78,19 @@ export default function RecruteurCandidatDetail() {
           <p style={{ margin: 0, color: "var(--texte-muet)" }}>{utilisateur.email}</p>
         </div>
         {profil.aCv && (
-          <button className="pf-btn pf-btn-primary" onClick={() => alert("Le telechargement du CV necessite la route /cv (a faire si besoin)")}>
-            Telecharger le CV
+          <button
+            type="button"
+            className="pf-btn pf-btn-primary"
+            onClick={telechargerCvCandidat}
+            disabled={cvDownloading}
+          >
+            {cvDownloading ? "Telechargement..." : "Telecharger le CV"}
           </button>
+        )}
+        {cvErreur && (
+          <div className="pf-alert pf-alert-error" style={{ marginTop: ".75rem" }}>
+            {cvErreur}
+          </div>
         )}
       </div>
 

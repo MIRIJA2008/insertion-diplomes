@@ -26,7 +26,7 @@ export default function CandidatAccueil() {
 
   const p = data.profil;
   const completion = p ? (
-    [p.niveauEtudes, p.etablissement, p.filiereId, p.competences?.length > 0, p.experience, p.cvPdf].filter(Boolean).length / 6 * 100
+    [p.niveauEtudes, p.etablissement, p.filiereId, p.competences?.length > 0, p.experience, p.aCv].filter(Boolean).length / 6 * 100
   ) : 0;
 
   return (

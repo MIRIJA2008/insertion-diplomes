@@ -23,11 +23,12 @@ import { adminRoutes } from "./modules/admin/admin.routes";
 import { candidatRoutes } from "./modules/candidat/candidat.routes";
 import { suggestionsRoutes } from "./modules/suggestions/suggestions.routes";
 import { errorHandler } from "./middlewares/errorHandler";
+import { env } from "./config/env";
 
 export const app = express();
 
 app.use(helmet());
-app.use(cors());
+app.use(cors({ origin: env.FRONTEND_URL }));
 // Limite relevee pour permettre l'envoi du CV en base64
 app.use(express.json({ limit: "15mb" }));
 
