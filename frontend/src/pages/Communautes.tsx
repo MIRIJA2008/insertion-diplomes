@@ -20,6 +20,8 @@ export default function Communautes() {
   const { user } = useAuth();
   const { t } = useI18n();
   const [liste, setListe] = useState<Communaute[]>([]);
+  const [chargementListe, setChargementListe] = useState(true);
+  const [erreurListe, setErreurListe] = useState<string | null>(null);
   const [selection, setSelection] = useState<Communaute | null>(null);
   const [nom, setNom] = useState("");
   const [description, setDescription] = useState("");
@@ -67,18 +69,31 @@ export default function Communautes() {
     }
   };
 
-  const charger = () => {
-    api<Communaute[]>("/communautes").then((l) => {
+  const charger = async () => {
+    setErreurListe(null);
+    setChargementListe(true);
+    try {
+      const l = await api<Communaute[]>("/communautes");
       setListe(l);
       if (selection) {
         const maj = l.find((c) => c.id === selection.id);
         if (maj) {
-          selectionner(maj);
+          void selectionner(maj);
         }
       }
-    }).catch(() => {});
+    } catch (error) {
+      setErreurListe(
+        error instanceof Error
+          ? error.message
+          : "Impossible de charger les communautes."
+      );
+    } finally {
+      setChargementListe(false);
+    }
   };
-  useEffect(charger, []);
+  useEffect(() => {
+    void charger();
+  }, []);
 
   const creer = async (e: FormEvent) => {
     e.preventDefault();
@@ -192,7 +207,16 @@ export default function Communautes() {
                 <div className="muted small">{c._count.membres} {t("comm.members")} {c.filiere ? `\u00B7 ${c.filiere.code}` : ""}</div>
               </div>
             ))}
-            {liste.length === 0 && <p className="muted small">{t("common.none")}</p>}
+            {chargementListe && <p className="muted small">Chargement des communautes...</p>}
+            {erreurListe && (
+              <div>
+                <p className="msg-liste" role="alert">{erreurListe}</p>
+                <button type="button" className="secondary" onClick={() => void charger()}>Réessayer</button>
+              </div>
+            )}
+            {!chargementListe && !erreurListe && liste.length === 0 && (
+              <p className="muted small">{t("common.none")}</p>
+            )}
           </div>
         </div>
 

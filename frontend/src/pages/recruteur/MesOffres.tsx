@@ -20,14 +20,34 @@ export default function RecruteurMesOffres() {
     competences: "", dateLimite: "",
   });
   const [erreur, setErreur] = useState("");
+  const [erreurChargement, setErreurChargement] = useState("");
+  const [erreurFilieres, setErreurFilieres] = useState("");
+  const [erreurAction, setErreurAction] = useState("");
 
-  const charger = () => {
+  const charger = async () => {
     setOffres(null);
-    api<Offre[]>("/offres/recruteur/mes-offres").then(setOffres).catch(() => setOffres([]));
+    setErreurChargement("");
+    try {
+      const resultat = await api<Offre[]>("/offres/recruteur/mes-offres");
+      setOffres(resultat);
+    } catch (e) {
+      setOffres(null);
+      setErreurChargement(e instanceof Error ? e.message : "Impossible de charger vos offres.");
+    }
   };
   useEffect(() => {
-    charger();
-    api<Filiere[]>("/filieres").then(setFilieres).catch(() => {});
+    void charger();
+
+    const chargerFilieres = async () => {
+      try {
+        const resultat = await api<Filiere[]>("/filieres");
+        setFilieres(resultat);
+      } catch (e) {
+        setErreurFilieres(e instanceof Error ? e.message : "Impossible de charger les filières.");
+      }
+    };
+
+    void chargerFilieres();
   }, []);
 
   const creer = async (e: FormEvent) => {
@@ -58,8 +78,13 @@ export default function RecruteurMesOffres() {
 
   const cloturer = async (id: number) => {
     if (!confirm("Cloturer cette offre ?")) return;
-    await api(`/offres/${id}`, { method: "PUT", body: { statut: "CLOTUREE" } }).catch(() => {});
-    charger();
+    setErreurAction("");
+    try {
+      await api(`/offres/${id}`, { method: "PUT", body: { statut: "CLOTUREE" } });
+      await charger();
+    } catch (e) {
+      setErreurAction(e instanceof Error ? e.message : "Impossible de clôturer cette offre.");
+    }
   };
 
   return (
@@ -74,8 +99,12 @@ export default function RecruteurMesOffres() {
         </div>
       </div>
 
-      {offres === null && <p className="muted">{t("common.loading")}</p>}
-      {offres !== null && offres.length === 0 && (
+      {erreurChargement && <p className="pf-alert pf-alert-error" role="alert">{erreurChargement}</p>}
+      {erreurFilieres && <p className="pf-alert pf-alert-error" role="alert">{erreurFilieres}</p>}
+      {erreurAction && <p className="pf-alert pf-alert-error" role="alert">{erreurAction}</p>}
+
+      {offres === null && !erreurChargement && <p className="muted">{t("common.loading")}</p>}
+      {!erreurChargement && offres !== null && offres.length === 0 && (
         <div className="pf-empty">
           <div className="pf-empty-icon">📝</div>
           <h3>Aucune offre publiee</h3>

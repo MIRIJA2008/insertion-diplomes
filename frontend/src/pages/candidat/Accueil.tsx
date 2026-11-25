@@ -17,10 +17,26 @@ interface DashboardData {
 export default function CandidatAccueil() {
   const { user } = useAuth();
   const [data, setData] = useState<DashboardData | null>(null);
+  const [erreur, setErreur] = useState("");
+
+  const charger = () => {
+    setErreur("");
+    api<DashboardData>("/candidat/dashboard")
+      .then(setData)
+      .catch((e) => setErreur(e instanceof Error ? e.message : "Impossible de charger votre espace."));
+  };
 
   useEffect(() => {
-    api<DashboardData>("/candidat/dashboard").then(setData).catch(() => {});
+    charger();
   }, []);
+
+  if (!data && erreur) return (
+    <div className="pf-empty">
+      <h3>Impossible de charger votre espace</h3>
+      <p>{erreur}</p>
+      <button className="pf-btn pf-btn-primary" onClick={charger}>Réessayer</button>
+    </div>
+  );
 
   if (!data) return <p className="muted">Chargement de votre espace...</p>;
 

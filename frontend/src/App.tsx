@@ -84,6 +84,7 @@ export default function App() {
           <Route path="/candidat/candidatures" element={<CandidatSuivi />} />
           <Route path="/candidat/candidature/:id" element={<CandidatureDetail />} />
           <Route path="/candidat/favoris" element={<CandidatFavoris />} />
+          <Route path="/candidat/alertes" element={<CandidatAlertes />} />
           <Route path="/candidat/parametres" element={<CandidatParametres />} />
         </Route>
 
@@ -91,6 +92,7 @@ export default function App() {
           <Route path="/recruteur" element={<RecruteurAccueil />} />
           <Route path="/recruteur/offres" element={<RecruteurMesOffres />} />
           <Route path="/recruteur/candidatures" element={<RecruteurRecu />} />
+          <Route path="/recruteur/pipeline" element={<RecruteurPipeline />} />
           <Route path="/recruteur/candidature/:id" element={<CandidatureDetail />} />
           <Route path="/recruteur/organisme" element={<RecruteurOrganisme />} />
           <Route path="/recruteur/candidat/:id" element={<RecruteurCandidatDetail />} />

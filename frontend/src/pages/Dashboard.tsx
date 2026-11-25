@@ -37,15 +37,15 @@ export default function Dashboard() {
           <div className="cand-stat-label">Recruteurs</div>
           <div className="cand-stat-value">{stats.totalRecruteurs}</div>
         </Link>
-        <Link to="/admin/offres" className="cand-stat" style={{ textDecoration: "none", color: "inherit" }}>
+        <div className="cand-stat" style={{ textDecoration: "none", color: "inherit" }}>
           <div className="cand-stat-label">Offres actives</div>
           <div className="cand-stat-value">{stats.offresOuvertes} / {stats.totalOffres}</div>
-        </Link>
-        <Link to="/admin/candidatures" className="cand-stat" style={{ textDecoration: "none", color: "inherit" }}>
+        </div>
+        <div className="cand-stat" style={{ textDecoration: "none", color: "inherit" }}>
           <div className="cand-stat-label">Candidatures</div>
           <div className="cand-stat-value">{stats.totalCandidatures}</div>
           {stats.candidaturesEnAttente > 0 && <div className="cand-stat-hint" style={{ color: "var(--fusion-amber)" }}>{stats.candidaturesEnAttente} en attente</div>}
-        </Link>
+        </div>
       </div>
 
       {/* GRAPHIQUE EVOLUTION */}

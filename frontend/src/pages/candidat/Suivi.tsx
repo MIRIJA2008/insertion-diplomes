@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { api, type Candidature } from "../../api";
 import { useI18n } from "../../i18n";
@@ -40,10 +40,22 @@ export default function CandidatSuivi() {
   const { t } = useI18n();
   const [all, setAll] = useState<Candidature[] | null>(null);
   const [filtre, setFiltre] = useState("");
+  const [erreur, setErreur] = useState("");
+
+  const charger = useCallback(async () => {
+    setAll(null);
+    setErreur("");
+    try {
+      const result = await api<Candidature[]>("/mes-candidatures");
+      setAll(result);
+    } catch (err) {
+      setErreur(err instanceof Error ? err.message : "Impossible de charger vos candidatures.");
+    }
+  }, []);
 
   useEffect(() => {
-    api<Candidature[]>("/mes-candidatures").then(setAll).catch(() => setAll([]));
-  }, []);
+    void charger();
+  }, [charger]);
 
   const filtered = useMemo(() => {
     if (!all) return null;
@@ -88,7 +100,16 @@ export default function CandidatSuivi() {
         ))}
       </div>
 
-      {all === null && <p className="muted">{t("common.loading")}</p>}
+      {erreur && (
+        <div className="pf-empty" role="alert">
+          <h3>Impossible de charger vos candidatures</h3>
+          <p>{erreur}</p>
+          <button className="pf-btn pf-btn-primary" onClick={() => void charger()}>
+            Réessayer
+          </button>
+        </div>
+      )}
+      {all === null && !erreur && <p className="muted">{t("common.loading")}</p>}
       {all !== null && all.length === 0 && (
         <div className="pf-empty">
           <div className="pf-empty-icon">📝</div>

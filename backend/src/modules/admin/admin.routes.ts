@@ -120,7 +120,7 @@ adminRoutes.get("/diplomes/:id", async (req, res, next) => {
   try {
     const id = idSchema.parse(req.params.id);
     const diplome = await prisma.utilisateur.findUnique({
-      where: { id },
+      where: { id, role: "CANDIDAT" },
       select: {
         id: true,
         nom: true,
@@ -157,6 +157,96 @@ adminRoutes.get("/diplomes/:id", async (req, res, next) => {
     if (!diplome) return res.status(404).json({ error: "Diplome introuvable" });
     res.json(diplome);
   } catch (e) { next(e); }
+});
+
+// Verification du profil d'un diplome (ADMIN uniquement)
+adminRoutes.patch("/diplomes/:id/verifier", requireRole("ADMIN"), async (req, res, next) => {
+  try {
+    const id = idSchema.parse(req.params.id);
+    const { verifie } = validationOrganismeSchema.parse(req.body);
+
+    const candidat = await prisma.utilisateur.findFirst({
+      where: { id, role: "CANDIDAT" },
+      select: { profilCandidat: { select: { id: true } } },
+    });
+
+    if (!candidat?.profilCandidat) {
+      return res.status(404).json({ error: "Profil candidat introuvable" });
+    }
+
+    const updated = await prisma.$transaction(async (tx) => {
+      const profil = await tx.profilCandidat.update({
+        where: { utilisateurId: id },
+        data: { verifie },
+        select: { verifie: true },
+      });
+
+      await tx.activiteLog.create({
+        data: {
+          utilisateurId: req.user!.id,
+          action: verifie ? "PROFIL_DIPLOME_VERIFIE" : "PROFIL_DIPLOME_NON_VERIFIE",
+          details: `Verification du profil du candidat ${id}: ${verifie}`,
+        },
+      });
+
+      return profil;
+    });
+
+    res.json(updated);
+  } catch (e) {
+    next(e);
+  }
+});
+
+// Modification de la situation professionnelle (ADMIN uniquement)
+adminRoutes.patch("/diplomes/:id/situation", requireRole("ADMIN"), async (req, res, next) => {
+  try {
+    const id = idSchema.parse(req.params.id);
+
+    const { situationPro } = z.object({
+      situationPro: z.enum([
+        "INCONNU",
+        "EN_RECHERCHE",
+        "EN_STAGE",
+        "EN_ALTERNANCE",
+        "EN_CDD",
+        "EN_CDI",
+        "INDEPENDANT",
+        "EN_FORMATION",
+      ]),
+    }).parse(req.body);
+
+    const candidat = await prisma.utilisateur.findFirst({
+      where: { id, role: "CANDIDAT" },
+      select: { profilCandidat: { select: { id: true } } },
+    });
+
+    if (!candidat?.profilCandidat) {
+      return res.status(404).json({ error: "Profil candidat introuvable" });
+    }
+
+    const updated = await prisma.$transaction(async (tx) => {
+      const profil = await tx.profilCandidat.update({
+        where: { utilisateurId: id },
+        data: { situationPro },
+        select: { situationPro: true },
+      });
+
+      await tx.activiteLog.create({
+        data: {
+          utilisateurId: req.user!.id,
+          action: "SITUATION_DIPLOME_MODIFIEE",
+          details: `Situation professionnelle du candidat ${id}: ${situationPro}`,
+        },
+      });
+
+      return profil;
+    });
+
+    res.json(updated);
+  } catch (e) {
+    next(e);
+  }
 });
 // Liste des organismes recruteurs
 adminRoutes.get("/organismes", async (req, res, next) => {

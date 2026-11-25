@@ -1,4 +1,4 @@
-import { useEffect, useState, type FormEvent } from "react";
+import { useCallback, useEffect, useState, type FormEvent } from "react";
 import { api } from "../../api";
 
 interface Filiere { id: number; code: string; intitule: string }
@@ -16,16 +16,35 @@ export default function CandidatAlertes() {
   const [ville, setVille] = useState("");
   const [motsCles, setMotsCles] = useState("");
   const [saving, setSaving] = useState(false);
+  const [erreurChargement, setErreurChargement] = useState("");
+  const [erreurFilieres, setErreurFilieres] = useState("");
+  const [erreurAction, setErreurAction] = useState("");
 
-  const charger = () => {
+  const charger = useCallback(async () => {
     setAlertes(null);
-    api<Alerte[]>("/alertes").then(setAlertes).catch(() => setAlertes([]));
-  };
+    setErreurChargement("");
+    try {
+      const result = await api<Alerte[]>("/alertes");
+      setAlertes(result);
+    } catch (e) {
+      setErreurChargement(e instanceof Error ? e.message : "Impossible de charger vos alertes.");
+    }
+  }, []);
 
   useEffect(() => {
-    charger();
-    api<Filiere[]>("/filieres").then(setFilieres).catch(() => {});
-  }, []);
+    void charger();
+
+    const chargerFilieres = async () => {
+      try {
+        const result = await api<Filiere[]>("/filieres");
+        setFilieres(result);
+      } catch (e) {
+        setErreurFilieres(e instanceof Error ? e.message : "Impossible de charger les filières.");
+      }
+    };
+
+    void chargerFilieres();
+  }, [charger]);
   const creer = async (e: FormEvent) => {
     e.preventDefault();
     setSaving(true);
@@ -44,21 +63,31 @@ export default function CandidatAlertes() {
       setNom(""); setFiliereId(""); setTypeContrat(""); setVille(""); setMotsCles("");
       charger();
     } catch (e) {
-      alert(e instanceof Error ? e.message : "Erreur");
+      setErreurAction(e instanceof Error ? e.message : "Impossible de créer cette alerte.");
     } finally {
       setSaving(false);
     }
   };
 
   const toggle = async (id: number, active: boolean) => {
-    await api(`/alertes/${id}`, { method: "PATCH", body: { active: !active } }).catch(() => {});
-    charger();
+    setErreurAction("");
+    try {
+      await api(`/alertes/${id}`, { method: "PATCH", body: { active: !active } });
+      await charger();
+    } catch (e) {
+      setErreurAction(e instanceof Error ? e.message : "Impossible de modifier cette alerte.");
+    }
   };
 
   const supprimer = async (id: number) => {
     if (!confirm("Supprimer cette alerte ?")) return;
-    await api(`/alertes/${id}`, { method: "DELETE" }).catch(() => {});
-    charger();
+    setErreurAction("");
+    try {
+      await api(`/alertes/${id}`, { method: "DELETE" });
+      await charger();
+    } catch (e) {
+      setErreurAction(e instanceof Error ? e.message : "Impossible de supprimer cette alerte.");
+    }
   };
 
   const actives = alertes ? alertes.filter((a) => a.active).length : 0;
@@ -75,9 +104,19 @@ export default function CandidatAlertes() {
         </div>
       </div>
 
-      {alertes === null && <p className="muted">Chargement...</p>}
+      {erreurChargement && (
+        <div className="alerte-empty" role="alert">
+          <h3>Impossible de charger vos alertes</h3>
+          <p>{erreurChargement}</p>
+          <button className="pf-btn pf-btn-primary" onClick={() => void charger()}>
+            Réessayer
+          </button>
+        </div>
+      )}
+      {erreurAction && <p className="pf-error" role="alert">{erreurAction}</p>}
+      {alertes === null && !erreurChargement && <p className="muted">Chargement...</p>}
 
-      {alertes !== null && alertes.length === 0 && (
+      {alertes !== null && !erreurChargement && alertes.length === 0 && (
         <div className="alerte-empty">
           <div className="alerte-empty-icon">🔔</div>
           <h3>Aucune alerte</h3>
@@ -85,7 +124,7 @@ export default function CandidatAlertes() {
         </div>
       )}
 
-      {alertes !== null && alertes.length > 0 && (
+      {alertes !== null && !erreurChargement && alertes.length > 0 && (
         <div>
           <p style={{ color: "var(--texte-muet)", marginBottom: "1rem", fontSize: ".9rem" }}>
             <strong style={{ color: "var(--fusion-cyan)" }}>{alertes.length}</strong>
@@ -127,6 +166,7 @@ export default function CandidatAlertes() {
                 Nom*
                 <input required value={nom} onChange={(e) => setNom(e.target.value)} placeholder="Ex: Offres informatique" />
               </label>
+              {erreurFilieres && <p className="pf-error" role="alert">{erreurFilieres}</p>}
               <label>
                 Filiere
                 <select value={filiereId} onChange={(e) => setFiliereId(e.target.value)}>

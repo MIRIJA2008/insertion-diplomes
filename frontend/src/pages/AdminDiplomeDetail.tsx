@@ -28,42 +28,79 @@ export default function AdminDiplomeDetail() {
   const { id } = useParams();
   const [data, setData] = useState<DiplomeDetail | null>(null);
   const [saving, setSaving] = useState(false);
+  const [erreur, setErreur] = useState("");
 
-  const charger = () => {
-    api<DiplomeDetail>(`/admin/diplomes/${id}`).then(setData).catch(() => {});
+  const charger = async () => {
+    setErreur("");
+    try {
+      const resultat = await api<DiplomeDetail>(`/admin/diplomes/${id}`);
+      setData(resultat);
+    } catch (err) {
+      setData(null);
+      setErreur(err instanceof Error ? err.message : "Impossible de charger la fiche du diplôme.");
+    }
   };
 
-  useEffect(() => { charger(); }, [id]);
+  useEffect(() => {
+    void charger();
+  }, [id]);
 
   const toggleVerif = async () => {
     if (!data?.profilCandidat) return;
     setSaving(true);
+    setErreur("");
     try {
       await api(`/admin/diplomes/${id}/verifier`, {
         method: "PATCH",
         body: { verifie: !data.profilCandidat.verifie },
       });
-      charger();
-    } finally { setSaving(false); }
+      await charger();
+    } catch (err) {
+      setErreur(err instanceof Error ? err.message : "Impossible de modifier la vérification.");
+    } finally {
+      setSaving(false);
+    }
   };
 
   const changerSituation = async (situation: string) => {
     setSaving(true);
+    setErreur("");
     try {
       await api(`/admin/diplomes/${id}/situation`, {
         method: "PATCH",
         body: { situationPro: situation },
       });
-      charger();
-    } finally { setSaving(false); }
+      await charger();
+    } catch (err) {
+      setErreur(err instanceof Error ? err.message : "Impossible de modifier la situation professionnelle.");
+    } finally {
+      setSaving(false);
+    }
   };
 
-  if (!data) return <p className="muted">Chargement...</p>;
+  if (!data) {
+    return (
+      <div>
+        <BackButton />
+        {erreur ? (
+          <div>
+            <p role="alert" className="cand-error">{erreur}</p>
+            <button className="pf-btn pf-btn-primary" onClick={() => void charger()}>
+              Réessayer
+            </button>
+          </div>
+        ) : (
+          <p className="muted">Chargement...</p>
+        )}
+      </div>
+    );
+  }
   const p = data.profilCandidat;
 
   return (
     <div>
       <BackButton />
+      {erreur && <p role="alert" className="cand-error">{erreur}</p>}
       <Link to="/admin/diplomes" className="pf-back" style={{ marginBottom: "1rem" }}>&larr; Retour à la liste</Link>
 
       <div className="cand-detail-header" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "2rem" }}>

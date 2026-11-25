@@ -14,31 +14,61 @@ export default function AdminOrganismeDetail() {
   const { id } = useParams();
   const [data, setData] = useState<Organisme | null>(null);
   const [saving, setSaving] = useState(false);
+  const [erreur, setErreur] = useState("");
 
-  const charger = () => {
-    api<Organisme>(`/admin/organismes/${id}`).then(setData).catch(() => {});
+  const charger = async (): Promise<boolean> => {
+    setErreur("");
+    try {
+      const organisme = await api<Organisme>(`/admin/organismes/${id}`);
+      setData(organisme);
+      return true;
+    } catch (err) {
+      setData(null);
+      setErreur(err instanceof Error ? err.message : "Impossible de charger la fiche organisme.");
+      return false;
+    }
   };
 
-  useEffect(() => { charger(); }, [id]);
+  useEffect(() => {
+    void charger();
+  }, [id]);
 
   const toggleVerif = async () => {
     if (!data) return;
     setSaving(true);
+    setErreur("");
     try {
       await api(`/admin/organismes/${id}/verifier`, {
         method: "PATCH",
         body: { verifie: !data.verifie },
       });
-      charger();
-    } finally { setSaving(false); }
+      await charger();
+    } catch (err) {
+      setErreur(err instanceof Error ? err.message : "Impossible de modifier la verification.");
+    } finally {
+      setSaving(false);
+    }
   };
 
-  if (!data) return <p className="muted">Chargement...</p>;
+  if (!data) {
+    return (
+      <div>
+        <BackButton />
+        {erreur ? (
+          <>
+            <p role="alert" className="cand-error">{erreur}</p>
+            <button className="pf-btn pf-btn-primary" onClick={() => void charger()}>Réessayer</button>
+          </>
+        ) : <p className="muted">Chargement...</p>}
+      </div>
+    );
+  }
 
   return (
     <div>
       <BackButton />
       <Link to="/admin/organismes" className="pf-back" style={{ marginBottom: "1rem" }}>&larr; Retour à la liste</Link>
+      {erreur && <p role="alert" className="cand-error">{erreur}</p>}
 
       <div className="cand-detail-header" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "2rem" }}>
         <div style={{ display: "flex", gap: "1.5rem", alignItems: "center" }}>

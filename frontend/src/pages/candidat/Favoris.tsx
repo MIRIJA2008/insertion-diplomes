@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { api } from "../../api";
 import { useI18n } from "../../i18n";
@@ -25,13 +25,23 @@ export default function CandidatFavoris() {
   const { t } = useI18n();
   const [favoris, setFavoris] = useState<FavoriItem[] | null>(null);
   const [enCours, setEnCours] = useState<number | null>(null);
+  const [erreur, setErreur] = useState("");
+  const [erreurAction, setErreurAction] = useState("");
 
-  const charger = () => {
+  const charger = useCallback(async () => {
     setFavoris(null);
-    api<FavoriItem[]>("/mes-favoris").then(setFavoris).catch(() => setFavoris([]));
-  };
+    setErreur("");
+    try {
+      const result = await api<FavoriItem[]>("/mes-favoris");
+      setFavoris(result);
+    } catch (e) {
+      setErreur(e instanceof Error ? e.message : "Impossible de charger vos favoris.");
+    }
+  }, []);
 
-  useEffect(charger, []);
+  useEffect(() => {
+    void charger();
+  }, [charger]);
 
   const retirer = async (offreId: number) => {
     setEnCours(offreId);
@@ -39,7 +49,7 @@ export default function CandidatFavoris() {
       await api(`/offres/${offreId}/favori`, { method: "PUT" });
       charger();
     } catch (e) {
-      alert(e instanceof Error ? e.message : "Erreur");
+      setErreurAction(e instanceof Error ? e.message : "Impossible de retirer ce favori.");
     } finally {
       setEnCours(null);
     }
@@ -54,8 +64,20 @@ export default function CandidatFavoris() {
         </div>
       </div>
 
-      {favoris === null && <p className="muted">{t("common.loading")}</p>}
-      {favoris !== null && favoris.length === 0 && (
+      {erreur && (
+        <div className="pf-empty" role="alert">
+          <h3>Impossible de charger vos favoris</h3>
+          <p>{erreur}</p>
+          <button className="pf-btn pf-btn-primary" onClick={() => void charger()}>
+            Réessayer
+          </button>
+        </div>
+      )}
+      {erreurAction && (
+        <p role="alert" className="pf-error">{erreurAction}</p>
+      )}
+      {favoris === null && !erreur && <p className="muted">{t("common.loading")}</p>}
+      {favoris !== null && !erreur && favoris.length === 0 && (
         <div className="pf-empty">
           <div className="pf-empty-icon">⭐</div>
           <h3>Aucun favori pour le moment</h3>
@@ -63,7 +85,7 @@ export default function CandidatFavoris() {
           <Link to="/offres" className="pf-btn pf-btn-primary">Explorer les offres</Link>
         </div>
       )}
-      {favoris !== null && favoris.length > 0 && (
+      {favoris !== null && !erreur && favoris.length > 0 && (
         <>
           <p style={{ color: "var(--texte-muet)", marginBottom: "1rem", fontSize: ".9rem" }}>
             <strong style={{ color: "var(--fusion-cyan)" }}>{favoris.length}</strong> offre{favoris.length > 1 ? "s" : ""} en favori

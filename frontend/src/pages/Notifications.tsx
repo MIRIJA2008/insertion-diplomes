@@ -41,15 +41,30 @@ export default function NotificationsPage() {
   const [data, setData] = useState<Notif[] | null>(null);
   const [tab, setTab] = useState("all");
   const [count, setCount] = useState(0);
+  const [erreur, setErreur] = useState("");
 
-  const charger = () => {
-    api<{ notifications: Notif[]; total: number }>("/notifications")
-      .then((r) => setData(r.notifications))
-      .catch(() => setData([]));
-    api<{ nonLues: number }>("/notifications/count").then((r) => setCount(r.nonLues)).catch(() => {});
+  const charger = async () => {
+    setErreur("");
+
+    try {
+      const r = await api<{ notifications: Notif[]; total: number }>("/notifications");
+      setData(r.notifications);
+    } catch (e) {
+      setData(null);
+      setErreur(e instanceof Error ? e.message : "Impossible de charger les notifications.");
+    }
+
+    try {
+      const r = await api<{ nonLues: number }>("/notifications/count");
+      setCount(r.nonLues);
+    } catch {
+      setCount(0);
+    }
   };
 
-  useEffect(charger, []);
+  useEffect(() => {
+    void charger();
+  }, []);
 
   const filtered = useMemo(() => {
     if (!data) return null;
@@ -58,20 +73,35 @@ export default function NotificationsPage() {
   }, [data, tab]);
 
   const marquerLue = async (id: number) => {
-    await api(`/notifications/${id}/lue`, { method: "PATCH" }).catch(() => {});
-    setData((prev) => prev?.map((n) => (n.id === id ? { ...n, lue: true } : n)) ?? null);
-    setCount((c) => Math.max(0, c - 1));
+    setErreur("");
+    try {
+      await api(`/notifications/${id}/lue`, { method: "PATCH" });
+      setData((prev) => prev?.map((n) => (n.id === id ? { ...n, lue: true } : n)) ?? null);
+      setCount((c) => Math.max(0, c - 1));
+    } catch (e) {
+      setErreur(e instanceof Error ? e.message : "Impossible de marquer cette notification comme lue.");
+    }
   };
 
   const toutLire = async () => {
-    await api("/notifications/tout-lire", { method: "PATCH" }).catch(() => {});
-    setData((prev) => prev?.map((n) => ({ ...n, lue: true })) ?? null);
-    setCount(0);
+    setErreur("");
+    try {
+      await api("/notifications/tout-lire", { method: "PATCH" });
+      setData((prev) => prev?.map((n) => ({ ...n, lue: true })) ?? null);
+      setCount(0);
+    } catch (e) {
+      setErreur(e instanceof Error ? e.message : "Impossible de marquer toutes les notifications comme lues.");
+    }
   };
 
   const supprimer = async (id: number) => {
-    await api(`/notifications/${id}`, { method: "DELETE" }).catch(() => {});
-    setData((prev) => prev?.filter((n) => n.id !== id) ?? null);
+    setErreur("");
+    try {
+      await api(`/notifications/${id}`, { method: "DELETE" });
+      setData((prev) => prev?.filter((n) => n.id !== id) ?? null);
+    } catch (e) {
+      setErreur(e instanceof Error ? e.message : "Impossible de supprimer cette notification.");
+    }
   };
 
   return (
@@ -88,6 +118,8 @@ export default function NotificationsPage() {
         )}
       </div>
 
+      {erreur && <p role="alert" style={{ color: "var(--danger, #b42318)" }}>{erreur}</p>}
+
       <div className="notif-page-tabs">
         {TABS.map((t) => (
           <button key={t.key} className={`notif-page-tab ${tab === t.key ? "active" : ""}`} onClick={() => setTab(t.key)}>
@@ -96,9 +128,9 @@ export default function NotificationsPage() {
         ))}
       </div>
 
-      {data === null && <p className="muted">Chargement...</p>}
+      {data === null && !erreur && <p className="muted">Chargement...</p>}
 
-      {filtered !== null && filtered.length === 0 && (
+      {!erreur && filtered !== null && filtered.length === 0 && (
         <div className="notif-page-empty">
           <div className="notif-page-empty-icon">🔔</div>
           <h3>{tab === "unread" ? "Aucune notification non lue" : "Aucune notification"}</h3>

@@ -10,24 +10,47 @@ interface Alerte {
 export default function AdminAlertes() {
   const [list, setList] = useState<Alerte[] | null>(null);
   const [loading, setLoading] = useState(false);
+  const [erreur, setErreur] = useState("");
 
-  const charger = () => {
-    api<Alerte[]>("/admin/alertes").then(setList).catch(() => setList([]));
+  const charger = async (): Promise<boolean> => {
+    setErreur("");
+    try {
+      const donnees = await api<Alerte[]>("/admin/alertes");
+      setList(donnees);
+      return true;
+    } catch (err) {
+      setList(null);
+      setErreur(err instanceof Error ? err.message : "Impossible de charger les alertes.");
+      return false;
+    }
   };
-  useEffect(charger, []);
+
+  useEffect(() => {
+    void charger();
+  }, []);
 
   const generer = async () => {
     setLoading(true);
+    setErreur("");
     try {
       await api("/admin/alertes/generer", { method: "POST" });
-      charger();
-      alert("Nouvelles alertes générées !");
-    } finally { setLoading(false); }
+      const succes = await charger();
+      if (succes) alert("Nouvelles alertes generees !");
+    } catch (err) {
+      setErreur(err instanceof Error ? err.message : "Impossible de generer les alertes.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   const changerStatut = async (id: number, statut: string) => {
-    await api(`/admin/alertes/${id}`, { method: "PATCH", body: { statut } }).catch(() => {});
-    charger();
+    setErreur("");
+    try {
+      await api(`/admin/alertes/${id}`, { method: "PATCH", body: { statut } });
+      await charger();
+    } catch (err) {
+      setErreur(err instanceof Error ? err.message : "Impossible de modifier le statut.");
+    }
   };
 
   const badgePriorite: any = { HAUTE: "cand-badge-refusee", MOYENNE: "cand-badge-envoyee", BASSE: "cand-badge-vue" };
@@ -44,7 +67,8 @@ export default function AdminAlertes() {
           {loading ? "Analyse..." : "⚡ Générer les alertes"}
         </button>
       </div>
-      {list === null && <p className="muted">Chargement...</p>}
+      {erreur && <p role="alert" className="cand-error">{erreur}</p>}
+      {list === null && !erreur && <p className="muted">Chargement...</p>}
       {list !== null && list.length === 0 && <p className="empty">Aucune alerte pour le moment.</p>}
       {list !== null && list.length > 0 && (
         <div className="cand-list">

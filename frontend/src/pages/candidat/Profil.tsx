@@ -28,6 +28,7 @@ function formatTaille(octets: number) {
 export default function CandidatProfil() {
   const [data, setData] = useState<ProfilMoi | null>(null);
   const [filieres, setFilieres] = useState<Filiere[]>([]);
+  const [erreurFilieres, setErreurFilieres] = useState("");
   const [form, setForm] = useState({
     niveauEtudes: "",
     filiereId: "",
@@ -46,8 +47,10 @@ export default function CandidatProfil() {
   const [dragOver, setDragOver] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const charger = () => {
-    api<ProfilMoi>("/profils/moi").then((d) => {
+  const charger = async () => {
+    setErreur("");
+    try {
+      const d = await api<ProfilMoi>("/profils/moi");
       setData(d);
       if (d.profil) {
         setForm({
@@ -59,12 +62,18 @@ export default function CandidatProfil() {
           experience: d.profil.experience ?? "",
         });
       }
-    }).catch((e) => setErreur(e.message));
+    } catch (e) {
+      setErreur(e instanceof Error ? e.message : "Impossible de charger le profil.");
+    }
   };
 
   useEffect(() => {
-    charger();
-    api<Filiere[]>("/filieres").then(setFilieres).catch(() => {});
+    void charger();
+    api<Filiere[]>("/filieres")
+      .then(setFilieres)
+      .catch((e) => {
+        setErreurFilieres(e instanceof Error ? e.message : "Impossible de charger les filieres.");
+      });
   }, []);
 
   const save = async (e: FormEvent) => {
@@ -163,6 +172,17 @@ export default function CandidatProfil() {
 
   if (!data && !erreur) return <p className="muted">Chargement...</p>;
 
+  if (!data && erreur) {
+    return (
+      <div className="pf-alert pf-alert-error" role="alert">
+        <p>{erreur}</p>
+        <button type="button" className="pf-btn" onClick={() => void charger()}>
+          Reessayer
+        </button>
+      </div>
+    );
+  }
+
   return (
     <div>
       <div className="pf-header">
@@ -172,7 +192,8 @@ export default function CandidatProfil() {
         </div>
       </div>
 
-      {erreur && <div className="pf-alert pf-alert-error" style={{ marginBottom: "1rem" }}>{erreur}</div>}
+      {erreur && <div className="pf-alert pf-alert-error" role="alert" style={{ marginBottom: "1rem" }}>{erreur}</div>}
+      {erreurFilieres && <div className="pf-alert pf-alert-error" role="alert" style={{ marginBottom: "1rem" }}>{erreurFilieres}</div>}
 
       {/* CV upload */}
       <div className="cand-profil-card">

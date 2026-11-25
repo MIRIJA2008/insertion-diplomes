@@ -18,16 +18,22 @@ export default function Offres() {
   const [params, setParams] = useSearchParams();
   const [offres, setOffres] = useState<Offre[] | null>(null);
   const [filieres, setFilieres] = useState<Filiere[]>([]);
+  const [erreurOffres, setErreurOffres] = useState("");
+  const [erreurFilieres, setErreurFilieres] = useState("");
   const [q, setQ] = useState(params.get("q") ?? "");
   const [ville, setVille] = useState(params.get("ville") ?? "");
   const [typeContrat, setTypeContrat] = useState(params.get("typeContrat") ?? "");
   const [filiereId, setFiliereId] = useState(params.get("filiereId") ?? "");
 
   useEffect(() => {
-    api<Filiere[]>("/filieres").then(setFilieres).catch(() => {});
+    api<Filiere[]>("/filieres")
+      .then(setFilieres)
+      .catch((error) => {
+        setErreurFilieres(error instanceof Error ? error.message : "Impossible de charger les filieres.");
+      });
   }, []);
 
-  const charger = () => {
+  const charger = async () => {
     const p = new URLSearchParams();
     if (q) p.set("q", q);
     if (ville) p.set("ville", ville);
@@ -35,21 +41,35 @@ export default function Offres() {
     if (filiereId) p.set("filiereId", filiereId);
     setParams(p);
     setOffres(null);
-    api<Offre[]>(`/offres?${p.toString()}`).then(setOffres).catch(() => setOffres([]));
+    setErreurOffres("");
+    try {
+      const resultat = await api<Offre[]>(`/offres?${p.toString()}`);
+      setOffres(resultat);
+    } catch (error) {
+      setErreurOffres(error instanceof Error ? error.message : "Impossible de charger les offres.");
+    }
   };
 
-  useEffect(charger, []);
+  useEffect(() => {
+    void charger();
+  }, []);
 
   const filtrer = (e: FormEvent) => {
     e.preventDefault();
     charger();
   };
 
-  const reinit = () => {
+  const reinit = async () => {
     setQ(""); setVille(""); setTypeContrat(""); setFiliereId("");
     setParams(new URLSearchParams());
     setOffres(null);
-    api<Offre[]>("/offres").then(setOffres).catch(() => setOffres([]));
+    setErreurOffres("");
+    try {
+      const resultat = await api<Offre[]>("/offres");
+      setOffres(resultat);
+    } catch (error) {
+      setErreurOffres(error instanceof Error ? error.message : "Impossible de charger les offres.");
+    }
   };
 
   return (
@@ -94,7 +114,18 @@ export default function Offres() {
           </div>
         </form>
 
-        {offres === null && (
+        {erreurFilieres && <p role="alert" className="pf-error">{erreurFilieres}</p>}
+
+        {erreurOffres && (
+          <div role="alert" className="pf-error">
+            <p>{erreurOffres}</p>
+            <button type="button" className="pf-btn pf-btn-ghost" onClick={() => void charger()}>
+              Reessayer
+            </button>
+          </div>
+        )}
+
+        {offres === null && !erreurOffres && (
           <div className="pf-offres-grid">
             {[1,2,3,4,5,6].map((i) => <div key={i} className="pf-skeleton" />)}
           </div>

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { api } from "../api";
 import BackButton from "../components/BackButton";
 
@@ -21,10 +21,39 @@ const LABELS_SITUATION: any = {
 
 export default function AdminStats() {
   const [data, setData] = useState<StatsData | null>(null);
+  const [erreur, setErreur] = useState("");
+
+  const charger = useCallback(async () => {
+    setData(null);
+    setErreur("");
+
+    try {
+      const resultats = await api<StatsData>("/admin/stats-insertion");
+      setData(resultats);
+    } catch (e) {
+      setErreur(
+        e instanceof Error ? e.message : "Impossible de charger les statistiques."
+      );
+    }
+  }, []);
 
   useEffect(() => {
-    api<StatsData>("/admin/stats-insertion").then(setData).catch(() => {});
-  }, []);
+    void charger();
+  }, [charger]);
+
+  if (erreur) {
+    return (
+      <div>
+        <BackButton />
+        <div className="pf-error" role="alert">
+          <p>{erreur}</p>
+          <button type="button" className="pf-btn pf-btn-ghost" onClick={() => void charger()}>
+            Réessayer
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   if (!data) return <p className="muted">Chargement des statistiques...</p>;
 

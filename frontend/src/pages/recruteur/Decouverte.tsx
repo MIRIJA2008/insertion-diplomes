@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { api } from "../../api";
 import BackButton from "../../components/BackButton";
 
@@ -15,14 +15,28 @@ interface Diplome {
 export default function RecruteurDecouverte() {
   const [list, setList] = useState<Diplome[] | null>(null);
   const [q, setQ] = useState("");
+  const [erreurChargement, setErreurChargement] = useState("");
+  const [erreurInvitation, setErreurInvitation] = useState("");
 
-  const charger = () => {
+  const charger = useCallback(async () => {
     setList(null);
+    setErreurChargement("");
     const url = q ? `/recruteurs/decouvrir?q=${encodeURIComponent(q)}` : "/recruteurs/decouvrir";
-    api<Diplome[]>(url).then(setList).catch(() => setList([]));
-  };
 
-  useEffect(() => { charger(); }, []);
+    try {
+      const resultats = await api<Diplome[]>(url);
+      setList(resultats);
+    } catch (e) {
+      setList(null);
+      setErreurChargement(
+        e instanceof Error ? e.message : "Impossible de charger les diplômés."
+      );
+    }
+  }, [q]);
+
+  useEffect(() => {
+    void charger();
+  }, [charger]);
 
   const rechercher = (e: React.FormEvent) => {
     e.preventDefault();
@@ -30,11 +44,14 @@ export default function RecruteurDecouverte() {
   };
 
   const inviter = async (id: number) => {
+    setErreurInvitation("");
     try {
       await api("/recruteurs/inviter", { method: "POST", body: { diplomeId: id } });
       alert("Invitation envoyée avec succès !");
     } catch (e) {
-      alert("Erreur lors de l envoi de l invitation.");
+      setErreurInvitation(
+        e instanceof Error ? e.message : "Impossible d'envoyer cette invitation."
+      );
     }
   };
 
@@ -55,9 +72,22 @@ export default function RecruteurDecouverte() {
         </div>
       </form>
 
-      {list === null && <p className="muted">Chargement...</p>}
-      {list !== null && list.length === 0 && <p className="empty">Aucun diplômé trouvé.</p>}
-      {list !== null && list.length > 0 && (
+      {erreurChargement && (
+        <div className="pf-error" role="alert">
+          <p>{erreurChargement}</p>
+          <button type="button" className="pf-btn pf-btn-ghost" onClick={() => void charger()}>
+            Réessayer
+          </button>
+        </div>
+      )}
+
+      {erreurInvitation && (
+        <p className="pf-error" role="alert">{erreurInvitation}</p>
+      )}
+
+      {list === null && !erreurChargement && <p className="muted">Chargement...</p>}
+      {list !== null && !erreurChargement && list.length === 0 && <p className="empty">Aucun diplômé trouvé.</p>}
+      {list !== null && !erreurChargement && list.length > 0 && (
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))", gap: "1rem" }}>
           {list.map((d) => (
             <div key={d.id} className="pf-offre-card">

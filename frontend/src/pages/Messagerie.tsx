@@ -1,4 +1,4 @@
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 import { api } from "../api";
 import { useI18n } from "../i18n";
 
@@ -16,34 +16,92 @@ export default function Messagerie() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [brouillon, setBrouillon] = useState("");
   const [destinataire, setDestinataire] = useState("");
+  const [erreurConversations, setErreurConversations] = useState("");
+  const [erreurMessages, setErreurMessages] = useState("");
+  const [erreurAction, setErreurAction] = useState("");
+  const [chargementConversations, setChargementConversations] = useState(true);
+  const [chargementMessages, setChargementMessages] = useState(false);
+  const [envoiEnCours, setEnvoiEnCours] = useState(false);
+  const [creationEnCours, setCreationEnCours] = useState(false);
+  const requeteMessages = useRef(0);
 
-  const charger = () => {
-    api<Conversation[]>("/messagerie/conversations").then(setConversations).catch(() => {});
+  const charger = async () => {
+    setErreurConversations("");
+    setChargementConversations(true);
+    try {
+      const donnees = await api<Conversation[]>("/messagerie/conversations");
+      setConversations(donnees);
+    } catch (error) {
+      setErreurConversations(error instanceof Error ? error.message : "Impossible de charger les conversations.");
+    } finally {
+      setChargementConversations(false);
+    }
   };
-  useEffect(charger, []);
+  useEffect(() => {
+    void charger();
+  }, []);
 
   const ouvrir = async (c: Conversation) => {
+    const numero = ++requeteMessages.current;
     setSelection(c);
-    api<Message[]>(`/messagerie/conversations/${c.id}/messages`).then(setMessages).catch(() => setMessages([]));
+    setMessages([]);
+    setErreurMessages("");
+    setChargementMessages(true);
+    try {
+      const donnees = await api<Message[]>(`/messagerie/conversations/${c.id}/messages`);
+      if (numero === requeteMessages.current) setMessages(donnees);
+    } catch (error) {
+      if (numero === requeteMessages.current) {
+        setErreurMessages(error instanceof Error ? error.message : "Impossible de charger les messages.");
+      }
+    } finally {
+      if (numero === requeteMessages.current) setChargementMessages(false);
+    }
   };
 
   const nouvelle = async (e: FormEvent) => {
     e.preventDefault();
     const id = Number(destinataire);
-    if (!id) return;
-    const c = await api<Conversation>("/messagerie/conversations", { method: "POST", body: { utilisateurId: id } }).catch(() => null);
-    setDestinataire("");
-    charger();
-    if (c) ouvrir(c);
+    if (!id || creationEnCours) return;
+    setErreurAction("");
+    setCreationEnCours(true);
+    try {
+      const c = await api<Conversation>("/messagerie/conversations", {
+        method: "POST",
+        body: { utilisateurId: id },
+      });
+      setDestinataire("");
+      await charger();
+      await ouvrir(c);
+    } catch (error) {
+      setErreurAction(error instanceof Error ? error.message : "Impossible de creer la conversation.");
+    } finally {
+      setCreationEnCours(false);
+    }
   };
 
   const envoyer = async (e: FormEvent) => {
     e.preventDefault();
-    if (!selection || !brouillon.trim()) return;
-    const m = await api<Message>(`/messagerie/conversations/${selection.id}/messages`, { method: "POST", body: { contenu: brouillon } }).catch(() => null);
-    setBrouillon("");
-    if (m) setMessages((ms) => [...ms, m]);
-    charger();
+    if (!selection || !brouillon.trim() || envoiEnCours) return;
+    const conversationId = selection.id;
+    const contenu = brouillon.trim();
+    setErreurAction("");
+    setEnvoiEnCours(true);
+    try {
+      const m = await api<Message>(`/messagerie/conversations/${conversationId}/messages`, {
+        method: "POST",
+        body: { contenu },
+      });
+      if (selection?.id === conversationId) {
+        setMessages((actuels) => [...actuels, m]);
+        setBrouillon("");
+      }
+      await charger();
+    } catch (error) {
+      setErreurAction(error instanceof Error ? error.message : "Impossible d'envoyer le message.");
+    } finally {
+      setEnvoiEnCours(false);
+    }
   };
 
   return (
@@ -53,8 +111,9 @@ export default function Messagerie() {
         <div>
           <form className="card" onSubmit={nouvelle} style={{ display: "flex", gap: ".5rem", marginBottom: "1rem" }}>
             <input type="number" min={1} placeholder={t("msg.with")} value={destinataire} onChange={(e) => setDestinataire(e.target.value)} />
-            <button type="submit">{t("msg.new")}</button>
+            <button type="submit" disabled={creationEnCours || !destinataire.trim()}>{creationEnCours ? "Création..." : t("msg.new")}</button>
           </form>
+          {erreurAction && <p role="alert" className="msg-liste">{erreurAction}</p>}
           <div className="conv-liste">
             {conversations.map((c) => {
               const autre = c.membres.map((m) => m.utilisateur.nom).join(", ");
@@ -65,7 +124,14 @@ export default function Messagerie() {
                 </div>
               );
             })}
-            {conversations.length === 0 && <p className="muted small">{t("common.none")}</p>}
+            {chargementConversations && <p className="muted small">Chargement...</p>}
+            {erreurConversations && (
+              <div>
+                <p role="alert" className="msg-liste">{erreurConversations}</p>
+                <button type="button" className="secondary" onClick={() => void charger()}>Réessayer</button>
+              </div>
+            )}
+            {!chargementConversations && !erreurConversations && conversations.length === 0 && <p className="muted small">{t("common.none")}</p>}
           </div>
         </div>
 
@@ -74,17 +140,25 @@ export default function Messagerie() {
           {selection && (
             <>
               <div className="msg-liste">
-                {messages.map((m) => (
+                {chargementMessages && <p className="muted small">Chargement des messages...</p>}
+                {erreurMessages && (
+                  <div>
+                    <p role="alert" className="msg-liste">{erreurMessages}</p>
+                    <button type="button" className="secondary" onClick={() => selection && void ouvrir(selection)}>Réessayer</button>
+                  </div>
+                )}
+                {!chargementMessages && !erreurMessages && messages.map((m) => (
                   <div key={m.id} className="msg-bulle">
                     <span className="qui">{m.auteur.nom} \u00B7 {new Date(m.envoyeLe).toLocaleString("fr-FR")}</span>
                     {m.contenu}
                   </div>
                 ))}
-                {messages.length === 0 && <p className="muted small">{t("common.none")}</p>}
+                {!chargementMessages && !erreurMessages && messages.length === 0 && <p className="muted small">{t("common.none")}</p>}
               </div>
+              {erreurAction && <p role="alert" className="msg-liste">{erreurAction}</p>}
               <form className="msg-form" onSubmit={envoyer}>
                 <input value={brouillon} onChange={(e) => setBrouillon(e.target.value)} placeholder={t("msg.write")} />
-                <button type="submit">{t("common.send")}</button>
+                <button type="submit" disabled={envoiEnCours || !brouillon.trim()}>{envoiEnCours ? "Envoi..." : t("common.send")}</button>
               </form>
             </>
           )}

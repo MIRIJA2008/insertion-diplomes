@@ -46,20 +46,27 @@ export default function RecruteurPipeline() {
   const [filtreOffre, setFiltreOffre] = useState("");
   const [saving, setSaving] = useState<number | null>(null);
   const [message, setMessage] = useState("");
+  const [erreur, setErreur] = useState("");
+  const [erreurOffres, setErreurOffres] = useState("");
 
   const charger = () => {
     const url = filtreOffre ? `/recruteur/pipeline?offreId=${filtreOffre}` : "/recruteur/pipeline";
     setData(null);
-    api<PipelineData>(url).then(setData).catch(() => setData({
-      ENVOYEE: [], VUE: [], ACCEPTEE: [], REFUSEE: [],
-      stats: { total: 0, parStatut: {} },
-    }));
+    setErreur("");
+    api<PipelineData>(url).then(setData).catch((e) => {
+      setData(null);
+      setErreur(e instanceof Error ? e.message : "Impossible de charger le pipeline.");
+    });
   };
 
   useEffect(() => {
-    api<OffreOption[]>("/offres/recruteur/mes-offres").then((offres: any) => {
-      setOffres(offres.map((o: any) => ({ id: o.id, titre: o.titre })));
-    }).catch(() => {});
+    api<OffreOption[]>("/offres/recruteur/mes-offres")
+      .then((resultat) => {
+        setOffres(resultat.map((o) => ({ id: o.id, titre: o.titre })));
+      })
+      .catch((e) => {
+        setErreurOffres(e instanceof Error ? e.message : "Impossible de charger les offres.");
+      });
   }, []);
 
   useEffect(charger, [filtreOffre]);
@@ -72,7 +79,7 @@ export default function RecruteurPipeline() {
       setMessage(`Statut mis a jour : ${statut}`);
       charger();
     } catch (e) {
-      setMessage(e instanceof Error ? e.message : "Erreur");
+      setMessage(e instanceof Error ? e.message : "Erreur lors du changement de statut.");
     } finally {
       setSaving(null);
     }
@@ -92,7 +99,8 @@ export default function RecruteurPipeline() {
           <option value="">Toutes les offres</option>
           {offres.map((o) => <option key={o.id} value={o.id}>{o.titre}</option>)}
         </select>
-        {message && <span className={`pf-chip ${message.includes("Erreur") ? "cand-badge-refusee" : "cand-badge-acceptee"}`} style={{ padding: ".45rem .85rem" }}>{message}</span>}
+        {erreurOffres && <p role="alert" className="pf-alert pf-alert-error">{erreurOffres}</p>}
+        {message && <p role={message.includes("Erreur") ? "alert" : "status"} className={`pf-alert ${message.includes("Erreur") ? "pf-alert-error" : "pf-alert-success"}`}>{message}</p>}
       </div>
 
       {data && data.stats.total > 0 && (
@@ -104,7 +112,15 @@ export default function RecruteurPipeline() {
         </div>
       )}
 
-      {data === null && <p className="muted">Chargement...</p>}
+      {data === null && !erreur && <p className="muted">Chargement...</p>}
+
+      {erreur && (
+        <div className="pf-empty">
+          <h3>Impossible de charger le pipeline</h3>
+          <p>{erreur}</p>
+          <button className="pf-btn pf-btn-primary" onClick={charger}>Réessayer</button>
+        </div>
+      )}
 
       {data !== null && (
         <div className="pipe-kanban">
